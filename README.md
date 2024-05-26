@@ -49,5 +49,4 @@ _note that space in between doesn't matter_
 
 ### Credits
 
-- [BipinKrish](https://github.com/bipinkrish)
-- [Tech VJ](https://telegram.dog/Kingvj01)
+- [⁽ ᴛᴄʀᴇᴘ ₎ 🍿]([https://telegram.dog/Kingvj01](https://t.me/tcrep1))

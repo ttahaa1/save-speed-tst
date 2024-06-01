@@ -21,6 +21,10 @@ else:
 
 # Flag to stop operations
 stop_operation = False
+stop_all_flag = False
+
+# List to store channels to monitor
+channels_to_monitor = []
 
 # download status
 def downstatus(statusfile, message):
@@ -62,8 +66,9 @@ def progress(current, total, message, type):
 # start command
 @bot.on_message(filters.command(["start"]))
 def send_start(client: Client, message):
-    global stop_operation
+    global stop_operation, stop_all_flag
     stop_operation = False
+    stop_all_flag = False
     bot.send_message(message.chat.id, f"**__👋 Hi** **{message.from_user.mention}**, **I am Save Restricted Bot, I can send you restricted content by its post link__**\n\n{USAGE}",
                      reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("⁽ ᴛᴄʀᴇᴘ ₎ 🍿", url="https://t.me/tcrep1")]]), reply_to_message_id=message.id)
 
@@ -73,6 +78,14 @@ def stop_operation_command(client: Client, message):
     global stop_operation
     stop_operation = True
     bot.send_message(message.chat.id, "The process has been stopped by pressing /start to start again 💫.")
+
+# stop all command
+@bot.on_message(filters.command(["stop_all"]))
+def stop_all_command(client: Client, message):
+    global stop_all_flag, channels_to_monitor
+    stop_all_flag = True
+    channels_to_monitor = []
+    bot.send_message(message.chat.id, "Monitoring of all channels has been stopped.")
 
 # login command to set session string
 @bot.on_message(filters.command(["login"]))
@@ -87,7 +100,7 @@ def set_session_string(client: Client, message):
 
 @bot.on_message(filters.text)
 def save(client: Client, message):
-    global stop_operation
+    global stop_operation, stop_all_flag, channels_to_monitor
     print(message.text)
     
     copied_count = 0
@@ -231,8 +244,7 @@ def handle_private(message, chatid, msgid):
         except:
             thumb = None
 
-
-        bot.send_video(message.chat.id, file, duration=msg.video.duration, width=msg.video.width, height=msg.video.height, thumb=thumb, caption=msg.caption, caption_entities=msg.caption_entities, progress=progress, progress_args=[message, "up"])
+        bot.send_video(message.chat.id, file, caption=msg.caption, caption_entities=msg.caption_entities, duration=msg.video.duration, width=msg.video.width, height=msg.video.height, supports_streaming=True, thumb=thumb, progress=progress, progress_args=[message, "up"])
         if thumb is not None:
             os.remove(thumb)
 
@@ -314,36 +326,26 @@ def get_message_type(msg):
 
 # handle all messages in a channel
 def handle_all_messages(message):
+    global channels_to_monitor, stop_all_flag
     datas = message.text.split("/")
     chat_id = int("-100" + datas[4]) if "c" in datas[3] else datas[3]
-    
-    try:
-        msg_ids = [msg.id for msg in acc.get_chat_history(chat_id)]
-    except Exception as e:
-        bot.send_message(message.chat.id, f"**Error** : __{e}__")
-        return
-    
-    copied_count = 0
-    error_count = 0
-    
-    for msgid in msg_ids:
-        if stop_operation:
-            bot.send_message(message.chat.id, "The process has been stopped by pressing /start to start again 💫.")
-            return
-        
-        try:
-            handle_private(message, chat_id, msgid)
-            copied_count += 1
-        except MessageEmpty:
-            error_count += 1
-        except Exception as e:
-            bot.send_message(message.chat.id, f"**Error** : __{e}__")
-            error_count += 1
-        
-        time.sleep(3)
-    
-    bot.send_message(message.chat.id, f"**Finished copying all messages**\n\nCopied messages: {copied_count}\nDeleted messages: {error_count}",
-                     reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("⁽ ᴛᴄʀᴇᴘ ₎ 🍿", url="https://t.me/tcrep1")]]))
+
+    if chat_id not in channels_to_monitor:
+        channels_to_monitor.append(chat_id)
+        bot.send_message(message.chat.id, f"Started monitoring channel {chat_id}")
+
+        while not stop_all_flag:
+            try:
+                for msg in acc.get_chat_history(chat_id, limit=5):
+                    if stop_all_flag:
+                        break
+                    handle_private(message, chat_id, msg.id)
+                    time.sleep(3)
+            except Exception as e:
+                bot.send_message(message.chat.id, f"**Error** : __{e}__")
+                return
+
+        bot.send_message(message.chat.id, f"Stopped monitoring channel {chat_id}")
 
 USAGE = """**FOR PUBLIC CHATS**
 

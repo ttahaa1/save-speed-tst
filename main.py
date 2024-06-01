@@ -42,7 +42,7 @@ def set_user_session(user_id, session):
 @bot.on_message(filters.command(["session"]))
 def set_session(client: pyrogram.Client, message: pyrogram.types.Message):
     user_id = message.from_user.id
-    if user_id != YOUR_ADMIN_USER_ID:
+    if user_id != 5705487207:
         bot.send_message(message.chat.id, "You are not authorized to use this command.")
         return
 

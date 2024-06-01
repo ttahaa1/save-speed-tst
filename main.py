@@ -1,6 +1,7 @@
 from pyrogram import Client, filters
 from pyrogram.errors import UserAlreadyParticipant, InviteHashExpired, UsernameNotOccupied, MessageEmpty, ChannelInvalid
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+from pyrogram.handlers import MessageHandler
 
 import time
 import os
@@ -20,7 +21,6 @@ else:
     acc = None
 
 # Flag to stop operations
-stop_operation = False
 stop_all_flag = False
 
 # List to store channels to monitor
@@ -58,7 +58,7 @@ def upstatus(statusfile, message):
         except:
             time.sleep(5)
 
-# progress writter
+# progress writer
 def progress(current, total, message, type):
     with open(f'{message.id}{type}status.txt', "w") as fileup:
         fileup.write(f"{current * 100 / total:.1f}%")
@@ -66,18 +66,10 @@ def progress(current, total, message, type):
 # start command
 @bot.on_message(filters.command(["start"]))
 def send_start(client: Client, message):
-    global stop_operation, stop_all_flag
-    stop_operation = False
+    global stop_all_flag
     stop_all_flag = False
     bot.send_message(message.chat.id, f"**__👋 Hi** **{message.from_user.mention}**, **I am Save Restricted Bot, I can send you restricted content by its post link__**\n\n{USAGE}",
                      reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("⁽ ᴛᴄʀᴇᴘ ₎ 🍿", url="https://t.me/tcrep1")]]), reply_to_message_id=message.id)
-
-# stop command
-@bot.on_message(filters.command(["stop"]))
-def stop_operation_command(client: Client, message):
-    global stop_operation
-    stop_operation = True
-    bot.send_message(message.chat.id, "The process has been stopped by pressing /start to start again 💫.")
 
 # stop all command
 @bot.on_message(filters.command(["stop_all"]))
@@ -100,7 +92,7 @@ def set_session_string(client: Client, message):
 
 @bot.on_message(filters.text)
 def save(client: Client, message):
-    global stop_operation, stop_all_flag, channels_to_monitor
+    global stop_all_flag, channels_to_monitor
     print(message.text)
     
     copied_count = 0
@@ -139,7 +131,7 @@ def save(client: Client, message):
             toID = fromID
 
         for msgid in range(fromID, toID + 1):
-            if stop_operation:
+            if stop_all_flag:
                 bot.send_message(message.chat.id, "The process has been stopped by pressing /start to start again 💫.")
                 return
 
@@ -147,7 +139,6 @@ def save(client: Client, message):
                 # private
                 if "https://t.me/c/" in message.text:
                     chatid = int("-100" + datas[4])
-
 
                     if acc is None:
                         bot.send_message(message.chat.id, f"**String Session is not Set**")
@@ -334,18 +325,11 @@ def handle_all_messages(message):
         channels_to_monitor.append(chat_id)
         bot.send_message(message.chat.id, f"Started monitoring channel {chat_id}")
 
-        while not stop_all_flag:
-            try:
-                for msg in acc.get_chat_history(chat_id, limit=5):
-                    if stop_all_flag:
-                        break
-                    handle_private(message, chat_id, msg.id)
-                    time.sleep(3)
-            except Exception as e:
-                bot.send_message(message.chat.id, f"**Error** : __{e}__")
+        @acc.on_message(filters.chat(chat_id))
+        def forward_new_messages(client, msg):
+            if stop_all_flag:
                 return
-
-        bot.send_message(message.chat.id, f"Stopped monitoring channel {chat_id}")
+            handle_private(message, chat_id, msg.id)
 
 USAGE = """**FOR PUBLIC CHATS**
 
@@ -359,17 +343,17 @@ USAGE = """**FOR PUBLIC CHATS**
 **MULTI POSTS**
 
 **__send public/private posts link as explained above with format "from - to" to send multiple messages like below__**
-```
+
 https://t.me/xxxx/1001-1010
 
 https://t.me/c/xxxx/101 - 120
-```
+
 **__for all messages__**
-```
+
 https://t.me/xxxx/all
 
 https://t.me/c/xxxx/all
-```
+
 **__note that space in between doesn't matter__**
 """
 

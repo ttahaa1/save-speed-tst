@@ -143,8 +143,8 @@ def save(client: Client, message):
                     chatid = int("-100" + datas[4])
 
                     if acc is None:
-                        bot.send_message(message.chat.id, f"**String Session is not Set**")
-                        return
+                        acc = None
+                        continue  # Skip the rest of the loop and move to the next iteration
 
                     try:
                         handle_private(message, chatid, msgid, acc)
@@ -153,6 +153,56 @@ def save(client: Client, message):
                             message.chat.id,
                             "⚠️ **mistakes . I cannot access the channel. Send the invitation link first. If you do not have an invitation link, contact support. @l_s_I_I .**",
                             reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("Support ᔆ ᴾ ᴱ ᴱ ᴰ ™𝓼", url="https://t.me/l_s_I_I")]])
+                        )
+                        return
+
+                # bot
+                elif "https://t.me/b/" in message.text:
+                    username = datas[4]
+
+                    if acc is None:
+                        acc = None
+                        continue  # Skip the rest of the loop and move to the next iteration
+
+                    try:
+                        handle_private(message, username, msgid, acc)
+                    except Exception as e:
+                        bot.send_message(message.chat.id, f"**Error** : __{e}__")
+
+                # public
+                else:
+                    username = datas[3]
+
+                    try:
+                        msg = bot.get_messages(username, msgid)
+                    except UsernameNotOccupied:
+                        bot.send_message(message.chat.id, f"**The username is not occupied by anyone**")
+                        return
+
+                    try:
+                        bot.copy_message(message.chat.id, msg.chat.id, msg.id)
+                        copied_count += 1
+                    except:
+                        if acc is None:
+                            acc = None
+                            continue  # Skip the rest of the loop and move to the next iteration
+                        try:
+                            handle_private(message, username, msgid, acc)
+                            copied_count += 1
+                        except Exception as e:
+                            if isinstance(e, MessageEmpty):
+                                error_count += 1
+                            else:
+                                bot.send_message(message.chat.id, f"**Error** : __{e}__")
+
+                # wait time
+                time.sleep(3)
+            except MessageEmpty:
+                error_count += 1
+
+        # Send final message
+        bot.send_message(message.chat.id, f"**Finished copying messages**\n\nCopied messages: {copied_count}\nDeleted messages: {error_count}",
+                         reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("⁽ ᴛᴄʀᴇᴘ ₎ 🍿", url="https://t.me/tcrep1")]]))
                         )
                         return
 

@@ -10,8 +10,8 @@ import json
 from os import environ
 
 # Environment variables
-api_id = environ.get("ID", "")
-api_hash = environ.get("HASH", "")
+api_id = environ.get("API_ID", "")
+api_hash = environ.get("API_HASH", "")
 bot_token = environ.get("TOKEN", "")
 bot = Client("mybot", api_id=api_id, api_hash=api_hash, bot_token=bot_token)
 
@@ -42,7 +42,7 @@ def set_user_session(user_id, session):
 @bot.on_message(filters.command(["session"]))
 def set_session(client: pyrogram.Client, message: pyrogram.types.Message):
     user_id = message.from_user.id
-    if user_id != 5705487207:
+    if user_id != YOUR_ADMIN_USER_ID:
         bot.send_message(message.chat.id, "You are not authorized to use this command.")
         return
 

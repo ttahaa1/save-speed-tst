@@ -1,9 +1,8 @@
 from pyrogram import Client, filters
 from pyrogram.errors import UserAlreadyParticipant, InviteHashExpired, UsernameNotOccupied, MessageEmpty, ChannelInvalid
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
-
-import time
 import os
+import time
 import threading
 from os import environ
 
@@ -17,6 +16,12 @@ user_sessions = {}
 
 # Flag to stop operations
 stop_operation = False
+
+# Function to handle session cleanup
+def cleanup_session(session_name):
+    session_file = f"{session_name}.session"
+    if os.path.exists(session_file):
+        os.remove(session_file)
 
 # download status
 def downstatus(statusfile, message):
@@ -88,9 +93,11 @@ def save(client: Client, message):
 
     user_id = message.from_user.id
     session_string = user_sessions.get(user_id)
+    session_name = f"user_{user_id}"
 
     if session_string:
-        acc = Client(f"user_{user_id}", api_id=api_id, api_hash=api_hash, session_string=session_string)
+        cleanup_session(session_name)
+        acc = Client(session_name, api_id=api_id, api_hash=api_hash, session_string=session_string)
         acc.start()
     else:
         acc = None

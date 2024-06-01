@@ -1,33 +1,102 @@
+import pyrogram
 from pyrogram import Client, filters
+from pyrogram.errors import UserAlreadyParticipant, InviteHashExpired, UsernameNotOccupied
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
-import os
+
 import time
+import os
 import threading
+import json
 from os import environ
 
+# Environment variables
+api_id = environ.get("API_ID", "")
+api_hash = environ.get("API_HASH", "")
 bot_token = environ.get("TOKEN", "")
-api_hash = environ.get("HASH", "")
-api_id = environ.get("ID", "")
 bot = Client("mybot", api_id=api_id, api_hash=api_hash, bot_token=bot_token)
 
+# User sessions storage
+user_sessions = {}
+
+# Load user sessions
+def load_user_sessions():
+    global user_sessions
+    if os.path.exists("user_sessions.json"):
+        with open("user_sessions.json", "r") as f:
+            user_sessions = json.load(f)
+
+# Save user sessions
+def save_user_sessions():
+    with open("user_sessions.json", "w") as f:
+        json.dump(user_sessions, f)
+
+# Initialize
+load_user_sessions()
+
+# Set user session
+def set_user_session(user_id, session):
+    user_sessions[user_id] = session
+    save_user_sessions()
+
+# Command to set session
+@bot.on_message(filters.command(["session"]))
+def set_session(client: pyrogram.Client, message: pyrogram.types.Message):
+    user_id = message.from_user.id
+    if user_id != YOUR_ADMIN_USER_ID:
+        bot.send_message(message.chat.id, "You are not authorized to use this command.")
+        return
+
+    session = message.text.split("/session ", 1)[1].strip()
+    set_user_session(user_id, session)
+    
+    # طلب إرسال User ID
+    bot.send_message(message.chat.id, "Session updated successfully! Please send your User ID.")
+
+# Handle incoming messages
+@bot.on_message(filters.text)
+def handle_message(client: pyrogram.Client, message: pyrogram.types.Message):
+    user_id = message.from_user.id
+    if user_id not in user_sessions:
+        bot.send_message(message.chat.id, "Please set your session first using /session command.")
+        return
+
+    session = user_sessions[user_id]
+    # Now you can use 'session' to perform actions with the user's account
+    
 ss = environ.get("STRING", "")
 if ss is not None:
-    acc = Client("myacc", api_id=api_id, api_hash=api_hash, session_string=ss)
+    acc = Client("myacc" ,api_id=api_id, api_hash=api_hash, session_string=ss)
     acc.start()
 else:
     acc = None
 
-# Flag to stop operations
-stop_all_flag = False
+# Load language preferences
+if os.path.exists("user_languages.json"):
+    with open("user_languages.json", "r") as f:
+        user_languages = json.load(f)
+else:
+    user_languages = {}
 
-# List to store channels to monitor
-channels_to_monitor = []
+# Save language preferences
+def save_user_languages():
+    with open("user_languages.json", "w") as f:
+        json.dump(user_languages, f)
+
+# Get user language
+def get_user_language(user_id):
+    return user_languages.get(str(user_id), None)
+
+# Set user language
+def set_user_language(user_id, language):
+    user_languages[str(user_id)] = language
+    save_user_languages()
 
 # Download status
 def downstatus(statusfile, message):
     while True:
         if os.path.exists(statusfile):
             break
+
     time.sleep(3)
     while os.path.exists(statusfile):
         with open(statusfile, "r") as downread:
@@ -43,6 +112,7 @@ def upstatus(statusfile, message):
     while True:
         if os.path.exists(statusfile):
             break
+
     time.sleep(3)
     while os.path.exists(statusfile):
         with open(statusfile, "r") as upread:
@@ -60,68 +130,80 @@ def progress(current, total, message, type):
 
 # Start command
 @bot.on_message(filters.command(["start"]))
-def send_start(client: Client, message):
-    global stop_all_flag
-    stop_all_flag = False
-    bot.send_message(
-        message.chat.id,
-        f"**__👋 Hi** **{message.from_user.mention}**, **I am Save Restricted Bot, I can send you restricted content by its post link__**\n\n{USAGE}",
-        reply_markup=InlineKeyboardMarkup(
-            [[InlineKeyboardButton("⁽ ᴛᴄʀᴇᴘ ₎ 🍿", url="https://t.me/tcrep1")]]
-        ),
-        reply_to_message_id=message.id,
-    )
+def send_start(client: pyrogram.client.Client, message: pyrogram.types.messages_and_media.message.Message):
+    user_id = message.from_user.id
+    user_language = get_user_language(user_id)
+    if user_language is None:
+        bot.send_message(message.chat.id, "__ choose your language  /  اختار لغه البوت __",
+                         reply_markup=InlineKeyboardMarkup([
+                             [InlineKeyboardButton("English 💞", callback_data="lang_en"),
+                              InlineKeyboardButton(" 💙 عربي", callback_data="lang_ar")]
+                         ]), reply_to_message_id=message.id)
+    else:
+        if user_language == "en":
+            bot.send_message(message.chat.id, f"**👋 Hi {message.from_user.mention}, I am Save Restricted Bot, I can send you restricted content by its post link**\n\n{USAGE}",
+                             reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("Channel ⁽ ᴛᴄʀᴇᴘ ₎ 🍿", url="https://t.me/tcrep1")]]), reply_to_message_id=message.id)
+        elif user_language == "ar":
+            bot.send_message(message.chat.id, f"**👋 مرحبًا {message.from_user.mention}، أنا بوت حفظ المحتوى المقيد، يمكنني إرسال المحتوى المقيد لك عبر رابط المنشور**\n\n{USAGE_AR}",
+                             reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton(" قناة ⁽ ᴛᴄʀᴇᴘ ₎ 🍿", url="https://t.me/tcrep1")]]), reply_to_message_id=message.id)
 
-# Stop all command
-@bot.on_message(filters.command(["stop_all"]))
-def stop_all_command(client: Client, message):
-    global stop_all_flag, channels_to_monitor
-    stop_all_flag = True
-    channels_to_monitor = []
-    bot.send_message(message.chat.id, "Monitoring of all channels has been stopped.")
-
-# Login command to set session string
-@bot.on_message(filters.command(["login"]))
-def set_session_string(client: Client, message):
-    global acc
-    session_string = message.text.split(' ', 1)[1]
-    if acc is not None:
-        acc.stop()
-    acc = Client("myacc", api_id=api_id, api_hash=api_hash, session_string=session_string)
-    acc.start()
-    bot.send_message(message.chat.id, "Session string updated successfully.")
+@bot.on_callback_query(filters.regex("lang_"))
+def language_callback(client, callback_query):
+    user_id = callback_query.from_user.id
+    language = callback_query.data.split("_")[1]
+    set_user_language(user_id, language)
+    if language == "en":
+        bot.send_message(callback_query.message.chat.id, f"**👋 Hi {callback_query.from_user.mention}, I am Save Restricted Bot, I can send you restricted content by its post link**\n\n{USAGE}",
+                         reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("Channel ⁽ ᴛᴄʀᴇᴘ ₎ 🍿", url="https://t.me/tcrep1")]]), reply_to_message_id=callback_query.message.id)
+    elif language == "ar":
+        bot.send_message(callback_query.message.chat.id, f"**👋 مرحبًا {callback_query.from_user.mention}، أنا بوت حفظ المحتوى المقيد، يمكنني إرسال المحتوى المقيد لك عبر رابط المنشور**\n\n{USAGE_AR}",
+                         reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton(" قناة ⁽ ᴛᴄʀᴇᴘ ₎ 🍿", url="https://t.me/tcrep1")]]), reply_to_message_id=callback_query.message.id)
+    callback_query.answer()
 
 @bot.on_message(filters.text)
-def save(client: Client, message):
-    global stop_all_flag, channels_to_monitor
+def save(client: pyrogram.client.Client, message: pyrogram.types.messages_and_media.message.Message):
+    user_language = get_user_language(message.from_user.id)
+    if user_language is None:
+        bot.send_message(message.chat.id, "__ choose your language  /  اختار لغه البوت __",
+                         reply_markup=InlineKeyboardMarkup([
+                             [InlineKeyboardButton("English 💞", callback_data="lang_en"),
+                              InlineKeyboardButton(" 💙 عربي", callback_data="lang_ar")]
+                         ]), reply_to_message_id=message.id)
+        return
+
     print(message.text)
-
-    copied_count = 0
-    error_count = 0
-
     # Joining chats
     if "https://t.me/+" in message.text or "https://t.me/joinchat/" in message.text:
         if acc is None:
-            bot.send_message(message.chat.id, f"**String Session is not Set**")
+            if user_language == "en":
+                bot.send_message(message.chat.id, "**String Session is not Set**", reply_to_message_id=message.id)
+            elif user_language == "ar":
+                bot.send_message(message.chat.id, "**جلسة السلسلة غير مضبوطة**", reply_to_message_id=message.id)
             return
+
         try:
             try:
                 acc.join_chat(message.text)
             except Exception as e:
-                bot.send_message(message.chat.id, f"**Error** : __{e}__")
+                bot.send_message(message.chat.id, f"**Error** : __{e}__", reply_to_message_id=message.id)
                 return
-            bot.send_message(message.chat.id, "**Chat Joined**")
+            if user_language == "en":
+                bot.send_message(message.chat.id, "**Chat Joined**", reply_to_message_id=message.id)
+            elif user_language == "ar":
+                bot.send_message(message.chat.id, "**تم الانضمام إلى الدردشة**", reply_to_message_id=message.id)
         except UserAlreadyParticipant:
-            bot.send_message(message.chat.id, "**Chat already Joined**")
+            if user_language == "en":
+                bot.send_message(message.chat.id, "**Chat already Joined**", reply_to_message_id=message.id)
+            elif user_language == "ar":
+                bot.send_message(message.chat.id, "**تم الانضمام إلى الدردشة مسبقاً**", reply_to_message_id=message.id)
         except InviteHashExpired:
-            bot.send_message(message.chat.id, "**Invalid Link**")
+            if user_language == "en":
+                bot.send_message(message.chat.id, "**Invalid Link**", reply_to_message_id=message.id)
+            elif user_language == "ar":
+                bot.send_message(message.chat.id, "**رابط غير صالح**", reply_to_message_id=message.id)
 
     # Getting message
     elif "https://t.me/" in message.text:
-        if "/all" in message.text:
-            handle_all_messages(message)
-            return
-
         datas = message.text.split("/")
         temp = datas[-1].replace("?single", "").split("-")
         fromID = int(temp[0].strip())
@@ -131,94 +213,74 @@ def save(client: Client, message):
             toID = fromID
 
         for msgid in range(fromID, toID + 1):
-            if stop_all_flag:
-                bot.send_message(message.chat.id, "The process has been stopped by pressing /start to start again 💫.")
-                return
+            # Private
+            if "https://t.me/c/" in message.text:
+                chatid = int("-100" + datas[4])
 
-            try:
-                # Private
-                if "https://t.me/c/" in message.text:
-                    chatid = int("-100" + datas[4])
+                if acc is None:
+                    if user_language == "en":
+                        bot.send_message(message.chat.id, "**String Session is not Set**", reply_to_message_id=message.id)
+                    elif user_language == "ar":
+                        bot.send_message(message.chat.id, "**جلسة السلسلة غير مضبوطة**", reply_to_message_id=message.id)
+                    return
 
+                handle_private(message, chatid, msgid)
+
+            # Bot
+            elif "https://t.me/b/" in message.text:
+                username = datas[4]
+
+                if acc is None:
+                    if user_language == "en":
+                        bot.send_message(message.chat.id, "**String Session is not Set**", reply_to_message_id=message.id)
+                    elif user_language == "ar":
+                        bot.send_message(message.chat.id, "**جلسة السلسلة غير مضبوطة**", reply_to_message_id=message.id)
+                    return
+                try:
+                    handle_private(message, username, msgid)
+                except Exception as e:
+                    bot.send_message(message.chat.id, f"**Error** : __{e}__", reply_to_message_id=message.id)
+
+            # Public
+            else:
+                username = datas[3]
+
+                try:
+                    msg = bot.get_messages(username, msgid)
+                except UsernameNotOccupied:
+                    if user_language == "en":
+                        bot.send_message(message.chat.id, "**The username is not occupied by anyone**", reply_to_message_id=message.id)
+                    elif user_language == "ar":
+                        bot.send_message(message.chat.id, "**اسم المستخدم غير مشغول من قبل أي شخص**", reply_to_message_id=message.id)
+                    return
+
+                try:
+                    bot.copy_message(message.chat.id, msg.chat.id, msg.id, reply_to_message_id=message.id)
+                except:
                     if acc is None:
-                        bot.send_message(message.chat.id, f"**String Session is not Set**")
-                        return
-
-                    try:
-                        handle_private(message, chatid, msgid)
-                    except ChannelInvalid:
-                        bot.send_message(
-                            message.chat.id,
-                            "⚠️ **mistakes . I cannot access the channel. Send the invitation link first. If you do not have an invitation link, contact support. @l_s_I_I .**",
-                            reply_markup=InlineKeyboardMarkup(
-                                [[InlineKeyboardButton("Support ᔆ ᴾ ᴱ ᴱ ᴰ ™𝓼", url="https://t.me/l_s_I_I")]]
-                            ),
-                        )
-                        return
-
-                # Bot
-                elif "https://t.me/b/" in message.text:
-                    username = datas[4]
-
-                    if acc is None:
-                        bot.send_message(message.chat.id, f"**String Session is not Set**")
+                        if user_language == "en":
+                            bot.send_message(message.chat.id, "**String Session is not Set**", reply_to_message_id=message.id)
+                        elif user_language == "ar":
+                            bot.send_message(message.chat.id, "**جلسة السلسلة غير مضبوطة**", reply_to_message_id=message.id)
                         return
                     try:
                         handle_private(message, username, msgid)
                     except Exception as e:
-                        bot.send_message(message.chat.id, f"**Error** : __{e}__")
+                        bot.send_message(message.chat.id, f"**Error** : __{e}__", reply_to_message_id=message.id)
 
-                # Public
-                else:
-                    username = datas[3]
-
-                    try:
-                        msg = bot.get_messages(username, msgid)
-                    except UsernameNotOccupied:
-                        bot.send_message(message.chat.id, f"**The username is not occupied by anyone**")
-                        return
-                    except PeerIdInvalid:
-                        bot.send_message(message.chat.id, f"**The username or chat ID is invalid**")
-                        return
-
-                    try:
-                        bot.copy_message(message.chat.id, msg.chat.id, msg.id)
-                        copied_count += 1
-                    except:
-                        if acc is None:
-                            bot.send_message(message.chat.id, f"**String Session is not Set**")
-                            return
-                        try:
-                            handle_private(message, username, msgid)
-                            copied_count += 1
-                        except Exception as e:
-                            if isinstance(e, MessageEmpty):
-                                error_count += 1
-                            else:
-                                bot.send_message(message.chat.id, f"**Error** : __{e}__")
-
-                # Wait time
-                time.sleep(3)
-            except MessageEmpty:
-                error_count += 1
-
-        # Send final message
-        bot.send_message(
-            message.chat.id,
-            f"**Finished copying messages**\n\nCopied messages: {copied_count}\nDeleted messages: {error_count}",
-            reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("⁽ ᴛᴄʀᴇᴘ ₎ 🍿", url="https://t.me/tcrep1")]])
-        )
+            # Wait time
+            time.sleep(3)
 
 # Handle private messages
-def handle_private(message, chatid, msgid):
-    msg = acc.get_messages(chatid, msgid)
+def handle_private(message: pyrogram.types.messages_and_media.message.Message, chatid: int, msgid: int):
+    msg: pyrogram.types.messages_and_media.message.Message = acc.get_messages(chatid, msgid)
     msg_type = get_message_type(msg)
 
     if "Text" == msg_type:
-        bot.send_message(message.chat.id, msg.text, entities=msg.entities)
+        bot.send_message(message.chat.id, msg.text, entities=msg.entities, reply_to_message_id=message.id)
         return
 
-    smsg = bot.send_message(message.chat.id, '__Downloading__')
+    smsg = bot.send_message(message.chat.id, '__Downloading__', reply_to_message_id=message.id)
     dosta = threading.Thread(target=lambda: downstatus(f'{message.id}downstatus.txt', smsg), daemon=True)
     dosta.start()
     file = acc.download_media(msg, progress=progress, progress_args=[message, "down"])
@@ -233,7 +295,8 @@ def handle_private(message, chatid, msgid):
         except:
             thumb = None
 
-        bot.send_document(message.chat.id, file, thumb=thumb, caption=msg.caption, caption_entities=msg.caption_entities, progress=progress, progress_args=[message, "up"])
+        bot.send_document(message.chat.id, file, thumb=thumb, caption=msg.caption, caption_entities=msg.caption_entities,
+                          reply_to_message_id=message.id, progress=progress, progress_args=[message, "up"])
         if thumb is not None:
             os.remove(thumb)
 
@@ -243,18 +306,21 @@ def handle_private(message, chatid, msgid):
         except:
             thumb = None
 
-        bot.send_video(message.chat.id, file, caption=msg.caption, caption_entities=msg.caption_entities, duration=msg.video.duration, width=msg.video.width, height=msg.video.height, supports_streaming=True, thumb=thumb, progress=progress, progress_args=[message, "up"])
+        bot.send_video(message.chat.id, file, duration=msg.video.duration, width=msg.video.width, height=msg.video.height,
+                       thumb=thumb, caption=msg.caption, caption_entities=msg.caption_entities,
+                       reply_to_message_id=message.id, progress=progress, progress_args=[message, "up"])
         if thumb is not None:
             os.remove(thumb)
 
     elif "Animation" == msg_type:
-        bot.send_animation(message.chat.id, file)
+        bot.send_animation(message.chat.id, file, reply_to_message_id=message.id)
 
     elif "Sticker" == msg_type:
-        bot.send_sticker(message.chat.id, file)
+        bot.send_sticker(message.chat.id, file, reply_to_message_id=message.id)
 
     elif "Voice" == msg_type:
-        bot.send_voice(message.chat.id, file, caption=msg.caption, caption_entities=msg.caption_entities, progress=progress, progress_args=[message, "up"])
+        bot.send_voice(message.chat.id, file, caption=msg.caption, thumb=thumb, caption_entities=msg.caption_entities,
+                       reply_to_message_id=message.id, progress=progress, progress_args=[message, "up"])
 
     elif "Audio" == msg_type:
         try:
@@ -262,19 +328,22 @@ def handle_private(message, chatid, msgid):
         except:
             thumb = None
 
-        bot.send_audio(message.chat.id, file, caption=msg.caption, caption_entities=msg.caption_entities, performer=msg.audio.performer, title=msg.audio.title, duration=msg.audio.duration, thumb=thumb, progress=progress, progress_args=[message, "up"])
+        bot.send_audio(message.chat.id, file, caption=msg.caption, caption_entities=msg.caption_entities,
+                      reply_to_message_id=message.id, progress=progress, progress_args=[message, "up"])
         if thumb is not None:
             os.remove(thumb)
 
     elif "Photo" == msg_type:
-        bot.send_photo(message.chat.id, file, caption=msg.caption, caption_entities=msg.caption_entities, progress=progress, progress_args=[message, "up"])
+        bot.send_photo(message.chat.id, file, caption=msg.caption, caption_entities=msg.caption_entities,
+                       reply_to_message_id=message.id)
 
-    os.remove(f'{message.id}upstatus.txt')
-    bot.delete_messages(message.chat.id, smsg.id)
     os.remove(file)
+    if os.path.exists(f'{message.id}upstatus.txt'):
+        os.remove(f'{message.id}upstatus.txt')
+    bot.delete_messages(message.chat.id, [smsg.id])
 
-# Get message type
-def get_message_type(msg):
+# Get the type of message
+def get_message_type(msg: pyrogram.types.messages_and_media.message.Message):
     try:
         msg.document.file_id
         return "Document"
@@ -323,47 +392,66 @@ def get_message_type(msg):
     except:
         pass
 
-# Handle all messages in a channel
-def handle_all_messages(message):
-    global channels_to_monitor, stop_all_flag
-    datas = message.text.split("/")
-    chat_id = int("-100" + datas[4]) if "c" in datas[3] else datas[3]
-
-    if chat_id not in channels_to_monitor:
-        channels_to_monitor.append(chat_id)
-        bot.send_message(message.chat.id, f"Started monitoring channel {chat_id}")
-
-        @acc.on_message(filters.chat(chat_id))
-        def forward_new_messages(client, msg):
-            if stop_all_flag:
-                return
-            handle_private(message, chat_id, msg.id)
-
 USAGE = """**FOR PUBLIC CHATS**
 
 **__just send post/s link__**
 
 **FOR PRIVATE CHATS**
 
-**__first send invite link of the chat (unnecessary if the account of string session already member of the chat) then send post/s link__**
+**__first send invite link of the chat (unnecessary if the account of string session already member of the chat)
+then send post/s link__**
 
+**FOR BOT CHATS**
+
+**__send link with** '/b/', **bot's username and message id, you might want to install some unofficial client to get the id like below__**
+
+```
+https://t.me/b/botusername/4321
+```
 
 **MULTI POSTS**
 
-**__send public/private posts link as explained above with format "from - to" to send multiple messages like below__**
+**__send public/private posts link as explained above with formate "from - to" to send multiple messages like below__**
 
+```
 https://t.me/xxxx/1001-1010
 
 https://t.me/c/xxxx/101 - 120
-
-**__for all messages__**
-
-https://t.me/xxxx/all
-
-https://t.me/c/xxxx/all
+```
 
 **__note that space in between doesn't matter__**
 """
 
-# Infinity polling
+USAGE_AR = """- **للدردشات العامة**
+
+**__ارسل رابط الرساله فقط لتحويلها__**
+
+- **للدردشات الخاصة**
+
+**__أرسل أولاً رابط دعوة للدردشة (غير ضروري إذا كان حساب جلسة السلسلة عضوًا بالفعل في الدردشة)
+ثم أرسل رابط المشاركة/المنشورات__**
+
+**لمحادثات الروبوت**
+
+**__أرسل رابطًا يحتوي على "/b/"، واسم مستخدم الروبوت ومعرف الرسالة، وقد ترغب في تثبيت عميل غير رسمي للحصول على المعرف كما هو موضح أدناه__**
+
+```
+https://t.me/b/botusername/4321
+```
+
+**تحويل متعدد**
+
+**__إرسال رابط المشاركات العامة/الخاصة كما هو موضح أعلاه بصيغة "من - إلى" لإرسال رسائل متعددة كما هو موضح أدناه__**
+
+```
+https://t.me/xxxx/1001-1010
+
+https://t.me/c/xxxx/101 - 120
+```
+
+**__لاحظ أن المسافة بينهما لا يهم__**
+"""
+
+
+# infinty polling
 bot.run()

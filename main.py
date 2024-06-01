@@ -1,8 +1,7 @@
 from pyrogram import Client, filters
-from pyrogram.errors import UserAlreadyParticipant, InviteHashExpired, UsernameNotOccupied, MessageEmpty, ChannelInvalid
+from pyrogram.errors import UserAlreadyParticipant, InviteHashExpired, UsernameNotOccupied, MessageEmpty, ChannelInvalid, PeerIdInvalid
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from pyrogram.handlers import MessageHandler
-
 import time
 import os
 import threading
@@ -26,12 +25,11 @@ stop_all_flag = False
 # List to store channels to monitor
 channels_to_monitor = []
 
-# download status
+# Download status
 def downstatus(statusfile, message):
     while True:
         if os.path.exists(statusfile):
             break
-
     time.sleep(3)
     while os.path.exists(statusfile):
         with open(statusfile, "r") as downread:
@@ -42,12 +40,11 @@ def downstatus(statusfile, message):
         except:
             time.sleep(5)
 
-# upload status
+# Upload status
 def upstatus(statusfile, message):
     while True:
         if os.path.exists(statusfile):
             break
-
     time.sleep(3)
     while os.path.exists(statusfile):
         with open(statusfile, "r") as upread:
@@ -58,20 +55,26 @@ def upstatus(statusfile, message):
         except:
             time.sleep(5)
 
-# progress writer
+# Progress writer
 def progress(current, total, message, type):
     with open(f'{message.id}{type}status.txt', "w") as fileup:
         fileup.write(f"{current * 100 / total:.1f}%")
 
-# start command
+# Start command
 @bot.on_message(filters.command(["start"]))
 def send_start(client: Client, message):
     global stop_all_flag
     stop_all_flag = False
-    bot.send_message(message.chat.id, f"**__👋 Hi** **{message.from_user.mention}**, **I am Save Restricted Bot, I can send you restricted content by its post link__**\n\n{USAGE}",
-                     reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("⁽ ᴛᴄʀᴇᴘ ₎ 🍿", url="https://t.me/tcrep1")]]), reply_to_message_id=message.id)
+    bot.send_message(
+        message.chat.id,
+        f"**__👋 Hi** **{message.from_user.mention}**, **I am Save Restricted Bot, I can send you restricted content by its post link__**\n\n{USAGE}",
+        reply_markup=InlineKeyboardMarkup(
+            [[InlineKeyboardButton("⁽ ᴛᴄʀᴇᴘ ₎ 🍿", url="https://t.me/tcrep1")]]
+        ),
+        reply_to_message_id=message.id,
+    )
 
-# stop all command
+# Stop all command
 @bot.on_message(filters.command(["stop_all"]))
 def stop_all_command(client: Client, message):
     global stop_all_flag, channels_to_monitor
@@ -79,7 +82,7 @@ def stop_all_command(client: Client, message):
     channels_to_monitor = []
     bot.send_message(message.chat.id, "Monitoring of all channels has been stopped.")
 
-# login command to set session string
+# Login command to set session string
 @bot.on_message(filters.command(["login"]))
 def set_session_string(client: Client, message):
     global acc
@@ -94,16 +97,15 @@ def set_session_string(client: Client, message):
 def save(client: Client, message):
     global stop_all_flag, channels_to_monitor
     print(message.text)
-    
+
     copied_count = 0
     error_count = 0
 
-    # joining chats
+    # Joining chats
     if "https://t.me/+" in message.text or "https://t.me/joinchat/" in message.text:
         if acc is None:
             bot.send_message(message.chat.id, f"**String Session is not Set**")
             return
-
         try:
             try:
                 acc.join_chat(message.text)
@@ -116,7 +118,7 @@ def save(client: Client, message):
         except InviteHashExpired:
             bot.send_message(message.chat.id, "**Invalid Link**")
 
-    # getting message
+    # Getting message
     elif "https://t.me/" in message.text:
         if "/all" in message.text:
             handle_all_messages(message)
@@ -136,7 +138,7 @@ def save(client: Client, message):
                 return
 
             try:
-                # private
+                # Private
                 if "https://t.me/c/" in message.text:
                     chatid = int("-100" + datas[4])
 
@@ -150,11 +152,13 @@ def save(client: Client, message):
                         bot.send_message(
                             message.chat.id,
                             "⚠️ **mistakes . I cannot access the channel. Send the invitation link first. If you do not have an invitation link, contact support. @l_s_I_I .**",
-                            reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("Support ᔆ ᴾ ᴱ ᴱ ᴰ ™𝓼", url="https://t.me/l_s_I_I")]])
+                            reply_markup=InlineKeyboardMarkup(
+                                [[InlineKeyboardButton("Support ᔆ ᴾ ᴱ ᴱ ᴰ ™𝓼", url="https://t.me/l_s_I_I")]]
+                            ),
                         )
                         return
 
-                # bot
+                # Bot
                 elif "https://t.me/b/" in message.text:
                     username = datas[4]
 
@@ -166,7 +170,7 @@ def save(client: Client, message):
                     except Exception as e:
                         bot.send_message(message.chat.id, f"**Error** : __{e}__")
 
-                # public
+                # Public
                 else:
                     username = datas[3]
 
@@ -174,6 +178,9 @@ def save(client: Client, message):
                         msg = bot.get_messages(username, msgid)
                     except UsernameNotOccupied:
                         bot.send_message(message.chat.id, f"**The username is not occupied by anyone**")
+                        return
+                    except PeerIdInvalid:
+                        bot.send_message(message.chat.id, f"**The username or chat ID is invalid**")
                         return
 
                     try:
@@ -192,16 +199,19 @@ def save(client: Client, message):
                             else:
                                 bot.send_message(message.chat.id, f"**Error** : __{e}__")
 
-                # wait time
+                # Wait time
                 time.sleep(3)
             except MessageEmpty:
                 error_count += 1
 
         # Send final message
-        bot.send_message(message.chat.id, f"**Finished copying messages**\n\nCopied messages: {copied_count}\nDeleted messages: {error_count}",
-                         reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("⁽ ᴛᴄʀᴇᴘ ₎ 🍿", url="https://t.me/tcrep1")]]))
+        bot.send_message(
+            message.chat.id,
+            f"**Finished copying messages**\n\nCopied messages: {copied_count}\nDeleted messages: {error_count}",
+            reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("⁽ ᴛᴄʀᴇᴘ ₎ 🍿", url="https://t.me/tcrep1")]])
+        )
 
-# handle private
+# Handle private messages
 def handle_private(message, chatid, msgid):
     msg = acc.get_messages(chatid, msgid)
     msg_type = get_message_type(msg)
@@ -265,7 +275,7 @@ def handle_private(message, chatid, msgid):
     bot.delete_messages(message.chat.id, smsg.id)
     os.remove(file)
 
-# get message type
+# Get message type
 def get_message_type(msg):
     try:
         msg.document.file_id
@@ -315,7 +325,7 @@ def get_message_type(msg):
     except:
         pass
 
-# handle all messages in a channel
+# Handle all messages in a channel
 def handle_all_messages(message):
     global channels_to_monitor, stop_all_flag
     datas = message.text.split("/")
@@ -357,5 +367,5 @@ https://t.me/c/xxxx/all
 **__note that space in between doesn't matter__**
 """
 
-# infinity polling
+# Infinity polling
 bot.run()

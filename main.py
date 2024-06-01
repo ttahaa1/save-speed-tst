@@ -10,8 +10,8 @@ import json
 from os import environ
 
 # Environment variables
-api_id = environ.get("API_ID", "")
-api_hash = environ.get("API_HASH", "")
+api_id = environ.get("ID", "")
+api_hash = environ.get("HASH", "")
 bot_token = environ.get("TOKEN", "")
 bot = Client("mybot", api_id=api_id, api_hash=api_hash, bot_token=bot_token)
 

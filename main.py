@@ -53,7 +53,7 @@ def upstatus(statusfile, message):
         except:
             time.sleep(5)
 
-# progress writter
+# progress writer
 def progress(current, total, message, type):
     with open(f'{message.id}{type}status.txt', "w") as fileup:
         fileup.write(f"{current * 100 / total:.1f}%")
@@ -61,8 +61,12 @@ def progress(current, total, message, type):
 # start command
 @bot.on_message(filters.command(["start"]))
 def send_start(client: Client, message):
-    bot.send_message(message.chat.id, f"**__👋 Hi** **{message.from_user.mention}**, **I am Save Restricted Bot, I can send you restricted content by its post link__**\n\n{USAGE}",
-    reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("Channel ⁽ ᴛᴄʀᴇᴘ ₎ 🍿 ", url="https://t.me/tcrep1")]]), reply_to_message_id=message.id)
+    bot.send_message(
+        message.chat.id,
+        f"**__👋 Hi** **{message.from_user.mention}**, **I am Save Restricted Bot, I can send you restricted content by its post link__**\n\n{USAGE}",
+        reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("Channel ⁽ ᴛᴄʀᴇᴘ ₎ 🍿", url="https://t.me/tcrep1")]]),
+        reply_to_message_id=message.id
+    )
 
 # login command
 @bot.on_message(filters.command(["login"]))
@@ -104,7 +108,6 @@ def save(client: Client, message):
 
         if user_session:
             user_acc.stop()
-
 
     # getting message
     elif "https://t.me/" in message.text:
@@ -211,7 +214,6 @@ def handle_private(message, chatid, msgid, user_acc):
     upsta = threading.Thread(target=lambda: upstatus(f'{message.id}upstatus.txt', smsg), daemon=True)
     upsta.start()
 
-
     if "Document" == msg_type:
         try:
             thumb = user_acc.download_media(msg.document.thumbs[0].file_id)
@@ -242,92 +244,33 @@ def handle_private(message, chatid, msgid, user_acc):
         bot.send_voice(message.chat.id, file, caption=msg.caption, caption_entities=msg.caption_entities, progress=progress, progress_args=[message, "up"])
 
     elif "Audio" == msg_type:
-        try:
-            thumb = user_acc.download_media(msg.audio.thumbs[0].file_id)
-        except:
-            thumb = None
-
         bot.send_audio(message.chat.id, file, caption=msg.caption, caption_entities=msg.caption_entities, progress=progress, progress_args=[message, "up"])
-        if thumb is not None:
-            os.remove(thumb)
 
-    elif "Photo" == msg_type:
-        bot.send_photo(message.chat.id, file, caption=msg.caption, caption_entities=msg.caption_entities)
-
+    os.remove(f'{message.id}upstatus.txt')
     os.remove(file)
-    if os.path.exists(f'{message.id}upstatus.txt'):
-        os.remove(f'{message.id}upstatus.txt')
-    bot.delete_messages(message.chat.id, [smsg.id])
 
 def get_message_type(msg):
-    try:
-        msg.document.file_id
-        return "Document"
-    except:
-        pass
-
-    try:
-        msg.video.file_id
-        return "Video"
-    except:
-        pass
-
-    try:
-        msg.animation.file_id
-        return "Animation"
-    except:
-        pass
-
-    try:
-        msg.sticker.file_id
-        return "Sticker"
-    except:
-        pass
-
-    try:
-        msg.voice.file_id
-        return "Voice"
-    except:
-        pass
-
-    try:
-        msg.audio.file_id
-        return "Audio"
-    except:
-        pass
-
-    try:
-        msg.photo.file_id
-        return "Photo"
-    except:
-        pass
-
-    try:
-        msg.text
+    if msg.text:
         return "Text"
-    except:
-        pass
+    elif msg.document:
+        return "Document"
+    elif msg.video:
+        return "Video"
+    elif msg.animation:
+        return "Animation"
+    elif msg.sticker:
+        return "Sticker"
+    elif msg.voice:
+        return "Voice"
+    elif msg.audio:
+        return "Audio"
+    return None
 
-USAGE = """**FOR PUBLIC CHATS**
+USAGE = '''
+**Usage:**
+1. To join a chat using an invite link, send the link (e.g., https://t.me/+/... or https://t.me/joinchat/...).
+2. To retrieve a message, send the message link (e.g., https://t.me/username/message_id).
+3. To login with your session string, use the /login command and reply with your session string.
+'''
 
-**__just send post/s link__**
-
-**FOR PRIVATE CHATS**
-
-**__first send invite link of the chat (unnecessary if the account of string session already member of the chat) then send post/s link__**
-
-
-**MULTI POSTS**
-
-**__send public/private posts link as explained above with format "from - to" to send multiple messages like below__**
-
-```
-https://t.me/xxxx/1001-1010
-
-https://t.me/c/xxxx/101 - 120
-```
-**__note that space in between doesn't matter__**
-"""
-
-# infinity polling
 bot.run()

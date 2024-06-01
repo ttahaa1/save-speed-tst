@@ -1,5 +1,5 @@
 from pyrogram import Client, filters
-from pyrogram.errors import UserAlreadyParticipant, InviteHashExpired, UsernameNotOccupied
+from pyrogram.errors import UserAlreadyParticipant, InviteHashExpired, UsernameNotOccupied, MessageEmpty, ChannelInvalid
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
 import time
@@ -7,8 +7,8 @@ import os
 import threading
 from os import environ
 
-bot_token = environ.get("TOKEN", "") 
-api_hash = environ.get("HASH", "") 
+bot_token = environ.get("TOKEN", "")
+api_hash = environ.get("HASH", "")
 api_id = environ.get("ID", "")
 bot = Client("mybot", api_id=api_id, api_hash=api_hash, bot_token=bot_token)
 
@@ -18,6 +18,9 @@ if ss is not None:
     acc.start()
 else:
     acc = None
+
+# Flag to stop operations
+stop_operation = False
 
 # download status
 def downstatus(statusfile, message):
@@ -59,12 +62,36 @@ def progress(current, total, message, type):
 # start command
 @bot.on_message(filters.command(["start"]))
 def send_start(client: Client, message):
+    global stop_operation
+    stop_operation = False
     bot.send_message(message.chat.id, f"**__👋 Hi** **{message.from_user.mention}**, **I am Save Restricted Bot, I can send you restricted content by its post link__**\n\n{USAGE}",
-    reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("Channel ⁽ ᴛᴄʀᴇᴘ ₎ 🍿 ", url="https://t.me/tcrep1")]]), reply_to_message_id=message.id)
+                     reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("⁽ ᴛᴄʀᴇᴘ ₎ 🍿", url="https://t.me/tcrep1")]]), reply_to_message_id=message.id)
+
+# stop command
+@bot.on_message(filters.command(["stop"]))
+def stop_operation_command(client: Client, message):
+    global stop_operation
+    stop_operation = True
+    bot.send_message(message.chat.id, "The process has been stopped by pressing /start to start again 💫.")
+
+# login command to set session string
+@bot.on_message(filters.command(["login"]))
+def set_session_string(client: Client, message):
+    global acc
+    session_string = message.text.split(' ', 1)[1]
+    if acc is not None:
+        acc.stop()
+    acc = Client("myacc", api_id=api_id, api_hash=api_hash, session_string=session_string)
+    acc.start()
+    bot.send_message(message.chat.id, "Session string updated successfully.")
 
 @bot.on_message(filters.text)
 def save(client: Client, message):
+    global stop_operation
     print(message.text)
+    
+    copied_count = 0
+    error_count = 0
 
     # joining chats
     if "https://t.me/+" in message.text or "https://t.me/joinchat/" in message.text:
@@ -86,6 +113,10 @@ def save(client: Client, message):
 
     # getting message
     elif "https://t.me/" in message.text:
+        if "/all" in message.text:
+            handle_all_messages(message)
+            return
+
         datas = message.text.split("/")
         temp = datas[-1].replace("?single", "").split("-")
         fromID = int(temp[0].strip())
@@ -95,41 +126,34 @@ def save(client: Client, message):
             toID = fromID
 
         for msgid in range(fromID, toID + 1):
-            # private
-            if "https://t.me/c/" in message.text:
-                chatid = int("-100" + datas[4])
+            if stop_operation:
+                bot.send_message(message.chat.id, "The process has been stopped by pressing /start to start again 💫.")
+                return
 
-                if acc is None:
-                    bot.send_message(message.chat.id, f"**String Session is not Set**")
-                    return
+            try:
+                # private
+                if "https://t.me/c/" in message.text:
+                    chatid = int("-100" + datas[4])
 
-                handle_private(message, chatid, msgid)
 
-            # bot
-            elif "https://t.me/b/" in message.text:
-                username = datas[4]
+                    if acc is None:
+                        bot.send_message(message.chat.id, f"**String Session is not Set**")
+                        return
 
-                if acc is None:
-                    bot.send_message(message.chat.id, f"**String Session is not Set**")
-                    return
-                try:
-                    handle_private(message, username, msgid)
-                except Exception as e:
-                    bot.send_message(message.chat.id, f"**Error** : __{e}__")
+                    try:
+                        handle_private(message, chatid, msgid)
+                    except ChannelInvalid:
+                        bot.send_message(
+                            message.chat.id,
+                            "⚠️ **mistakes . I cannot access the channel. Send the invitation link first. If you do not have an invitation link, contact support. @l_s_I_I .**",
+                            reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("Support ᔆ ᴾ ᴱ ᴱ ᴰ ™𝓼", url="https://t.me/l_s_I_I")]])
+                        )
+                        return
 
-            # public
-            else:
-                username = datas[3]
+                # bot
+                elif "https://t.me/b/" in message.text:
+                    username = datas[4]
 
-                try:
-                    msg = bot.get_messages(username, msgid)
-                except UsernameNotOccupied:
-                    bot.send_message(message.chat.id, f"**The username is not occupied by anyone**")
-                    return
-
-                try:
-                    bot.copy_message(message.chat.id, msg.chat.id, msg.id)
-                except:
                     if acc is None:
                         bot.send_message(message.chat.id, f"**String Session is not Set**")
                         return
@@ -138,8 +162,40 @@ def save(client: Client, message):
                     except Exception as e:
                         bot.send_message(message.chat.id, f"**Error** : __{e}__")
 
-            # wait time
-            time.sleep(3)
+                # public
+                else:
+                    username = datas[3]
+
+                    try:
+                        msg = bot.get_messages(username, msgid)
+                    except UsernameNotOccupied:
+                        bot.send_message(message.chat.id, f"**The username is not occupied by anyone**")
+                        return
+
+                    try:
+                        bot.copy_message(message.chat.id, msg.chat.id, msg.id)
+                        copied_count += 1
+                    except:
+                        if acc is None:
+                            bot.send_message(message.chat.id, f"**String Session is not Set**")
+                            return
+                        try:
+                            handle_private(message, username, msgid)
+                            copied_count += 1
+                        except Exception as e:
+                            if isinstance(e, MessageEmpty):
+                                error_count += 1
+                            else:
+                                bot.send_message(message.chat.id, f"**Error** : __{e}__")
+
+                # wait time
+                time.sleep(3)
+            except MessageEmpty:
+                error_count += 1
+
+        # Send final message
+        bot.send_message(message.chat.id, f"**Finished copying messages**\n\nCopied messages: {copied_count}\nDeleted messages: {error_count}",
+                         reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("⁽ ᴛᴄʀᴇᴘ ₎ 🍿", url="https://t.me/tcrep1")]]))
 
 # handle private
 def handle_private(message, chatid, msgid):
@@ -175,6 +231,7 @@ def handle_private(message, chatid, msgid):
         except:
             thumb = None
 
+
         bot.send_video(message.chat.id, file, duration=msg.video.duration, width=msg.video.width, height=msg.video.height, thumb=thumb, caption=msg.caption, caption_entities=msg.caption_entities, progress=progress, progress_args=[message, "up"])
         if thumb is not None:
             os.remove(thumb)
@@ -194,19 +251,18 @@ def handle_private(message, chatid, msgid):
         except:
             thumb = None
 
-        bot.send_audio(message.chat.id, file, caption=msg.caption, caption_entities=msg.caption_entities, progress=progress, progress_args=[message, "up"])
+        bot.send_audio(message.chat.id, file, caption=msg.caption, caption_entities=msg.caption_entities, performer=msg.audio.performer, title=msg.audio.title, duration=msg.audio.duration, thumb=thumb, progress=progress, progress_args=[message, "up"])
         if thumb is not None:
             os.remove(thumb)
 
     elif "Photo" == msg_type:
-        bot.send_photo(message.chat.id, file, caption=msg.caption, caption_entities=msg.caption_entities)
+        bot.send_photo(message.chat.id, file, caption=msg.caption, caption_entities=msg.caption_entities, progress=progress, progress_args=[message, "up"])
 
+    os.remove(f'{message.id}upstatus.txt')
+    bot.delete_messages(message.chat.id, smsg.id)
     os.remove(file)
-    if os.path.exists(f'{message.id}upstatus.txt'):
-        os.remove(f'{message.id}upstatus.txt')
-    bot.delete_messages(message.chat.id, [smsg.id])
 
-# get the type of message
+# get message type
 def get_message_type(msg):
     try:
         msg.document.file_id
@@ -256,6 +312,39 @@ def get_message_type(msg):
     except:
         pass
 
+# handle all messages in a channel
+def handle_all_messages(message):
+    datas = message.text.split("/")
+    chat_id = int("-100" + datas[4]) if "c" in datas[3] else datas[3]
+    
+    try:
+        msg_ids = [msg.id for msg in acc.get_chat_history(chat_id)]
+    except Exception as e:
+        bot.send_message(message.chat.id, f"**Error** : __{e}__")
+        return
+    
+    copied_count = 0
+    error_count = 0
+    
+    for msgid in msg_ids:
+        if stop_operation:
+            bot.send_message(message.chat.id, "The process has been stopped by pressing /start to start again 💫.")
+            return
+        
+        try:
+            handle_private(message, chat_id, msgid)
+            copied_count += 1
+        except MessageEmpty:
+            error_count += 1
+        except Exception as e:
+            bot.send_message(message.chat.id, f"**Error** : __{e}__")
+            error_count += 1
+        
+        time.sleep(3)
+    
+    bot.send_message(message.chat.id, f"**Finished copying all messages**\n\nCopied messages: {copied_count}\nDeleted messages: {error_count}",
+                     reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("⁽ ᴛᴄʀᴇᴘ ₎ 🍿", url="https://t.me/tcrep1")]]))
+
 USAGE = """**FOR PUBLIC CHATS**
 
 **__just send post/s link__**
@@ -268,11 +357,16 @@ USAGE = """**FOR PUBLIC CHATS**
 **MULTI POSTS**
 
 **__send public/private posts link as explained above with format "from - to" to send multiple messages like below__**
-
 ```
 https://t.me/xxxx/1001-1010
 
 https://t.me/c/xxxx/101 - 120
+```
+**__for all messages__**
+```
+https://t.me/xxxx/all
+
+https://t.me/c/xxxx/all
 ```
 **__note that space in between doesn't matter__**
 """

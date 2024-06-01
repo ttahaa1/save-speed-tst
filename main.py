@@ -79,16 +79,15 @@ def stop_operation_command(client: Client, message):
 @bot.on_message(filters.command(["login"]))
 def login(client: Client, message):
     bot.send_message(message.chat.id, "Please send your Pyrogram session string. You can get it from @ASBB7bot or @PyrogramTexBot.")
-    bot.listen_for_response(message.chat.id, handle_session_string)
 
-# Handle session string
-def handle_session_string(client: Client, message):
-    user_sessions[message.from_user.id] = message.text
-    bot.send_message(message.chat.id, "Session string has been set. You can now send links for restricted content.")
+@bot.on_message(filters.text & filters.reply)
+def save_session(client: Client, message):
+    if message.reply_to_message and message.reply_to_message.text == "Please send your Pyrogram session string. You can get it from @ASBB7bot or @PyrogramTexBot.":
+        user_sessions[message.from_user.id] = message.text
+        bot.send_message(message.chat.id, "Session saved successfully!")
 
-@bot.on_message(filters.text)
+@bot.on_message(filters.text & ~filters.reply)
 def save(client: Client, message):
-    global stop_operation
     print(message.text)
 
     user_id = message.from_user.id

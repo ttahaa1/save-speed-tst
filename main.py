@@ -78,11 +78,12 @@ def stop_operation_command(client: Client, message):
 # login command
 @bot.on_message(filters.command(["login"]))
 def login(client: Client, message):
-    bot.send_message(message.chat.id, "Please send your Pyrogram session string. You can get it from @ASBB7bot or @PyrogramTexBot.")
+    bot.send_message(message.chat.id, "**Please send your biogram session string! Make sure it is a reply to this message. To know how to obtain it, watch:-👇👇**",
+                     reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("Click to view", url="https://t.me/Save_Restricted_speed/980")]]))
 
 @bot.on_message(filters.text & filters.reply)
 def save_session(client: Client, message):
-    if message.reply_to_message and message.reply_to_message.text == "Please send your Pyrogram session string. You can get it from @ASBB7bot or @PyrogramTexBot.":
+    if message.reply_to_message and message.reply_to_message.text == "**Please send your biogram session string! Make sure it is a reply to this message. To know how to obtain it, watch:-👇👇**":
         user_sessions[message.from_user.id] = message.text
         bot.send_message(message.chat.id, "Session saved successfully!")
 
@@ -107,7 +108,7 @@ def save(client: Client, message):
     # joining chats
     if "https://t.me/+" in message.text or "https://t.me/joinchat/" in message.text:
         if acc is None:
-            bot.send_message(message.chat.id, "**String Session is not Set**")
+            bot.send_message(message.chat.id, "**The string session is not set. Set one with the /login command 👌**")
             return
 
         try:
@@ -143,7 +144,7 @@ def save(client: Client, message):
                     chatid = int("-100" + datas[4])
 
                     if acc is None:
-                        bot.send_message(message.chat.id, f"**String Session is not Set**")
+                        bot.send_message(message.chat.id, f"**The string session is not set. Set one with the /login command 👌**")
                         return
 
                     try:
@@ -161,7 +162,7 @@ def save(client: Client, message):
                     username = datas[4]
 
                     if acc is None:
-                        bot.send_message(message.chat.id, f"**String Session is not Set**")
+                        bot.send_message(message.chat.id, f"**The string session is not set. Set one with the /login command 👌**")
                         return
                     try:
                         handle_private(message, username, msgid, acc)
@@ -326,7 +327,7 @@ USAGE = """**FOR PUBLIC CHATS**
 
 **FOR PRIVATE CHATS**
 
-**__first send invite link of the chat (unnecessary if the account of string session already member of the chat) then send post/s link__**
+**__first send invite link of the chat • If you do not have the invite link, the issue can be resolved using the /login command__**
 
 
 **MULTI POSTS**

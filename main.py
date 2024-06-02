@@ -4,8 +4,7 @@ from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 import os
 import time
 import threading
-import asyncio
-from os import environ
+import asyncio  # استيراد asyncio
 
 bot_token = environ.get("TOKEN", "")
 api_hash = environ.get("HASH", "")
@@ -206,7 +205,7 @@ def save(client: Client, message):
                          reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("⁽ ᴛᴄʀᴇᴘ ₎ 🍿", url="https://t.me/tcrep1")]]))
 
     if session_string:
-        acc.stop()
+        acc.start()
 
 # handle private
 def handle_private(message, chatid, msgid, acc):
@@ -342,5 +341,9 @@ https://t.me/c/xxxx/101 - 120
 **__note that space in between doesn't matter__**
 """
 
-# infinity polling
-asyncio.run(bot.run())
+# Start the bot
+async def main():
+    await bot.start()
+    await bot.idle()
+
+asyncio.run(main())

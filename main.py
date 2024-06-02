@@ -78,12 +78,12 @@ def stop_operation_command(client: Client, message):
 # login command
 @bot.on_message(filters.command(["login"]))
 def login(client: Client, message):
-    bot.send_message(message.chat.id, "**Please send your biogram session string! Make sure it is a reply to this message. To know how to obtain it, watch:-👇👇**",
+    bot.send_message(message.chat.id, "Please send your biogram session string! Make sure it is a reply to this message. To know how to obtain it, watch:-👇👇",
                      reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("Click to view", url="https://t.me/Save_Restricted_speed/980")]]))
 
 @bot.on_message(filters.text & filters.reply)
 def save_session(client: Client, message):
-    if message.reply_to_message and message.reply_to_message.text == "**Please send your biogram session string! Make sure it is a reply to this message. To know how to obtain it, watch:-👇👇**":
+    if message.reply_to_message and message.reply_to_message.text == "Please send your biogram session string! Make sure it is a reply to this message. To know how to obtain it, watch:-👇👇":
         user_sessions[message.from_user.id] = message.text
         bot.send_message(message.chat.id, "Session saved successfully!")
 

@@ -4,6 +4,7 @@ from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 import os
 import time
 import threading
+import asyncio
 from os import environ
 
 bot_token = environ.get("TOKEN", "")
@@ -342,4 +343,4 @@ https://t.me/c/xxxx/101 - 120
 """
 
 # infinity polling
-bot.run()
+asyncio.run(bot.run())

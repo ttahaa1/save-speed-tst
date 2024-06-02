@@ -34,7 +34,7 @@ def downstatus(statusfile, message):
         with open(statusfile, "r") as downread:
             txt = downread.read()
         try:
-            bot.edit_message_text(message.chat.id, message.id, f"__Downloaded__ : **{txt}**")
+            bot.edit_message_text(message.chat.id, message.message_id, f"__Downloaded__ : **{txt}**")
             time.sleep(10)
         except:
             time.sleep(5)
@@ -50,14 +50,14 @@ def upstatus(statusfile, message):
         with open(statusfile, "r") as upread:
             txt = upread.read()
         try:
-            bot.edit_message_text(message.chat.id, message.id, f"__Uploaded__ : **{txt}**")
+            bot.edit_message_text(message.chat.id, message.message_id, f"__Uploaded__ : **{txt}**")
             time.sleep(10)
         except:
             time.sleep(5)
 
 # progress writter
 def progress(current, total, message, type):
-    with open(f'{message.id}{type}status.txt', "w") as fileup:
+    with open(f'{message.message_id}{type}status.txt', "w") as fileup:
         fileup.write(f"{current * 100 / total:.1f}%")
 
 # start command
@@ -66,7 +66,7 @@ def send_start(client: Client, message):
     global stop_operation
     stop_operation = False
     bot.send_message(message.chat.id, f"**__👋 Hi** **{message.from_user.mention}**, **I am Save Restricted Bot, I can send you restricted content by its post link__**\n\n{USAGE}",
-                     reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("⁽ ᴛᴄʀᴇᴘ ₎ 🍿", url="https://t.me/tcrep1")]]), reply_to_message_id=message.id)
+                     reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("⁽ ᴛᴄʀᴇᴘ ₎ 🍿", url="https://t.me/tcrep1")]]), reply_to_message_id=message.message_id)
 
 # stop command
 @bot.on_message(filters.command(["stop"]))
@@ -180,7 +180,7 @@ def save(client: Client, message):
                         return
 
                     try:
-                        bot.copy_message(message.chat.id, msg.chat.id, msg.id)
+                        bot.copy_message(message.chat.id, msg.chat.id, msg.message_id)
                         copied_count += 1
                     except:
                         if acc is None:
@@ -217,12 +217,12 @@ def handle_private(message, chatid, msgid, acc):
         return
 
     smsg = bot.send_message(message.chat.id, '__Downloading__')
-    dosta = threading.Thread(target=lambda: downstatus(f'{message.id}downstatus.txt', smsg), daemon=True)
+    dosta = threading.Thread(target=lambda: downstatus(f'{message.message_id}downstatus.txt', smsg), daemon=True)
     dosta.start()
     file = acc.download_media(msg, progress=progress, progress_args=[message, "down"])
-    os.remove(f'{message.id}downstatus.txt')
+    os.remove(f'{message.message_id}downstatus.txt')
 
-    upsta = threading.Thread(target=lambda: upstatus(f'{message.id}upstatus.txt', smsg), daemon=True)
+    upsta = threading.Thread(target=lambda: upstatus(f'{message.message_id}upstatus.txt', smsg), daemon=True)
     upsta.start()
 
     if "Document" == msg_type:
@@ -267,8 +267,8 @@ def handle_private(message, chatid, msgid, acc):
     elif "Photo" == msg_type:
         bot.send_photo(message.chat.id, file, caption=msg.caption, caption_entities=msg.caption_entities, progress=progress, progress_args=[message, "up"])
 
-    os.remove(f'{message.id}upstatus.txt')
-    bot.delete_messages(message.chat.id, smsg.id)
+    os.remove(f'{message.message_id}upstatus.txt')
+    bot.delete_messages(message.chat.id, smsg.message_id)
     os.remove(file)
 
 # get message type

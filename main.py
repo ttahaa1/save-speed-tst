@@ -1,8 +1,9 @@
 from pyrogram import Client, filters
 from pyrogram.errors import UserAlreadyParticipant, InviteHashExpired, UsernameNotOccupied, MessageEmpty, ChannelInvalid
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
-import os
+
 import time
+import os
 import threading
 from os import environ
 
@@ -11,17 +12,15 @@ api_hash = environ.get("HASH", "")
 api_id = environ.get("ID", "")
 bot = Client("mybot", api_id=api_id, api_hash=api_hash, bot_token=bot_token)
 
-# Dictionary to store user session strings
-user_sessions = {}
+ss = environ.get("STRING", "")
+if ss is not None:
+    acc = Client("myacc", api_id=api_id, api_hash=api_hash, session_string=ss)
+    acc.start()
+else:
+    acc = None
 
 # Flag to stop operations
 stop_operation = False
-
-# Function to handle session cleanup
-def cleanup_session(session_name):
-    session_file = f"{session_name}.session"
-    if os.path.exists(session_file):
-        os.remove(session_file)
 
 # download status
 def downstatus(statusfile, message):
@@ -29,15 +28,15 @@ def downstatus(statusfile, message):
         if os.path.exists(statusfile):
             break
 
-    time.sleep(3)
+    time.sleep(2)
     while os.path.exists(statusfile):
         with open(statusfile, "r") as downread:
             txt = downread.read()
         try:
             bot.edit_message_text(message.chat.id, message.id, f"__Downloaded__ : **{txt}**")
-            time.sleep(10)
+            time.sleep(9)
         except:
-            time.sleep(5)
+            time.sleep(4)
 
 # upload status
 def upstatus(statusfile, message):
@@ -45,20 +44,22 @@ def upstatus(statusfile, message):
         if os.path.exists(statusfile):
             break
 
-    time.sleep(3)
+    time.sleep(2)
     while os.path.exists(statusfile):
         with open(statusfile, "r") as upread:
             txt = upread.read()
         try:
             bot.edit_message_text(message.chat.id, message.id, f"__Uploaded__ : **{txt}**")
-            time.sleep(10)
+            time.sleep(9)
         except:
-            time.sleep(5)
+            time.sleep(4)
 
 # progress writter
 def progress(current, total, message, type):
+    speed = current / (time.time() - progress.start_time)
+    estimated_time = (total - current) / speed
     with open(f'{message.id}{type}status.txt', "w") as fileup:
-        fileup.write(f"{current * 100 / total:.1f}%")
+        fileup.write(f"{current * 100 / total:.1f}%\nSpeed: {speed:.2f} B/s\nEstimated time: {estimated_time:.2f} s")
 
 # start command
 @bot.on_message(filters.command(["start"]))
@@ -73,42 +74,20 @@ def send_start(client: Client, message):
 def stop_operation_command(client: Client, message):
     global stop_operation
     stop_operation = True
-    bot.send_message(message.chat.id, "The process has been stopped. Press /start to start again 💫.")
+    bot.send_message(message.chat.id, "The process has been stopped by pressing /start to start again 💫.")
 
-# login command
-@bot.on_message(filters.command(["login"]))
-def login(client: Client, message):
-    bot.send_message(message.chat.id, "Please send your biogram session string! Make sure it is a reply to this message. To know how to obtain it, watch:-👇👇",
-                     reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("Click to view", url="https://t.me/Save_Restricted_speed/980")]]))
-
-@bot.on_message(filters.text & filters.reply)
-def save_session(client: Client, message):
-    if message.reply_to_message and message.reply_to_message.text == "Please send your biogram session string! Make sure it is a reply to this message. To know how to obtain it, watch:-👇👇":
-        user_sessions[message.from_user.id] = message.text
-        bot.send_message(message.chat.id, "Session saved successfully!")
-
-@bot.on_message(filters.text & ~filters.reply)
+@bot.on_message(filters.text)
 def save(client: Client, message):
+    global stop_operation
     print(message.text)
-
-    user_id = message.from_user.id
-    session_string = user_sessions.get(user_id)
-    session_name = f"user_{user_id}"
-
-    if session_string:
-        cleanup_session(session_name)
-        acc = Client(session_name, api_id=api_id, api_hash=api_hash, session_string=session_string)
-        acc.start()
-    else:
-        acc = None
-
+    
     copied_count = 0
     error_count = 0
 
     # joining chats
     if "https://t.me/+" in message.text or "https://t.me/joinchat/" in message.text:
         if acc is None:
-            bot.send_message(message.chat.id, "**The string session is not set. Set one with the /login command 👌**")
+            bot.send_message(message.chat.id, f"**String Session is not Set**")
             return
 
         try:
@@ -135,7 +114,7 @@ def save(client: Client, message):
 
         for msgid in range(fromID, toID + 1):
             if stop_operation:
-                bot.send_message(message.chat.id, "The process has been stopped. Press /start to start again 💫.")
+                bot.send_message(message.chat.id, "The process has been stopped by pressing /start to start again 💫.")
                 return
 
             try:
@@ -143,12 +122,13 @@ def save(client: Client, message):
                 if "https://t.me/c/" in message.text:
                     chatid = int("-100" + datas[4])
 
+
                     if acc is None:
-                        bot.send_message(message.chat.id, f"**The string session is not set. Set one with the /login command 👌**")
+                        bot.send_message(message.chat.id, f"**String Session is not Set**")
                         return
 
                     try:
-                        handle_private(message, chatid, msgid, acc)
+                        handle_private(message, chatid, msgid)
                     except ChannelInvalid:
                         bot.send_message(
                             message.chat.id,
@@ -162,10 +142,10 @@ def save(client: Client, message):
                     username = datas[4]
 
                     if acc is None:
-                        bot.send_message(message.chat.id, f"**The string session is not set. Set one with the /login command 👌**")
+                        bot.send_message(message.chat.id, f"**String Session is not Set**")
                         return
                     try:
-                        handle_private(message, username, msgid, acc)
+                        handle_private(message, username, msgid)
                     except Exception as e:
                         bot.send_message(message.chat.id, f"**Error** : __{e}__")
 
@@ -187,7 +167,7 @@ def save(client: Client, message):
                             bot.send_message(message.chat.id, f"**String Session is not Set**")
                             return
                         try:
-                            handle_private(message, username, msgid, acc)
+                            handle_private(message, username, msgid)
                             copied_count += 1
                         except Exception as e:
                             if isinstance(e, MessageEmpty):
@@ -196,19 +176,16 @@ def save(client: Client, message):
                                 bot.send_message(message.chat.id, f"**Error** : __{e}__")
 
                 # wait time
-                time.sleep(3)
+                time.sleep(2)
             except MessageEmpty:
                 error_count += 1
 
         # Send final message
-        bot.send_message(message.chat.id, f"**Finished copying messages**\n\nCopied messages: {copied_count}\nDeleted messages: {error_count}",
+        bot.send_message(message.chat.id, f"**تم نسخ وتحويل الرسائل من البوت @{bot.get_me().username}**",
                          reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("⁽ ᴛᴄʀᴇᴘ ₎ 🍿", url="https://t.me/tcrep1")]]))
 
-    if session_string:
-        acc.stop()
-
 # handle private
-def handle_private(message, chatid, msgid, acc):
+def handle_private(message, chatid, msgid):
     msg = acc.get_messages(chatid, msgid)
     msg_type = get_message_type(msg)
 
@@ -216,6 +193,7 @@ def handle_private(message, chatid, msgid, acc):
         bot.send_message(message.chat.id, msg.text, entities=msg.entities)
         return
 
+    progress.start_time = time.time()
     smsg = bot.send_message(message.chat.id, '__Downloading__')
     dosta = threading.Thread(target=lambda: downstatus(f'{message.id}downstatus.txt', smsg), daemon=True)
     dosta.start()
@@ -240,6 +218,7 @@ def handle_private(message, chatid, msgid, acc):
             thumb = acc.download_media(msg.video.thumbs[0].file_id)
         except:
             thumb = None
+
 
         bot.send_video(message.chat.id, file, duration=msg.video.duration, width=msg.video.width, height=msg.video.height, thumb=thumb, caption=msg.caption, caption_entities=msg.caption_entities, progress=progress, progress_args=[message, "up"])
         if thumb is not None:
@@ -327,7 +306,7 @@ USAGE = """**FOR PUBLIC CHATS**
 
 **FOR PRIVATE CHATS**
 
-**__first send invite link of the chat • If you do not have the invite link, the issue can be resolved using the /login command__**
+**__first send invite link of the chat (unnecessary if the account of string session already member of the chat) then send post/s link__**
 
 
 **MULTI POSTS**

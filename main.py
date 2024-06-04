@@ -1,11 +1,11 @@
+from pyrogram import Client, filters
+from pyrogram.errors import UserAlreadyParticipant, InviteHashExpired, UsernameNotOccupied, MessageEmpty, ChannelInvalid
+from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+
 import os
 import threading
 import time
 from os import environ
-
-from pyrogram import Client, filters
-from pyrogram.errors import UserAlreadyParticipant, InviteHashExpired, UsernameNotOccupied, MessageEmpty, ChannelInvalid
-from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
 bot_token = environ.get("TOKEN", "")
 api_hash = environ.get("HASH", "")
@@ -38,7 +38,7 @@ def downstatus(statusfile, message):
                 message.id,
                 f"__Downloaded__ : **{txt}**"
             )
-            time.sleep(9)
+            time.sleep(2)  # Changed sleep time to 2 seconds
         except:
             time.sleep(4)
 
@@ -68,14 +68,22 @@ def progress(current, total, message, type):
     file_size_mb = total / (1024 * 1024)  # Convert to MB
     downloaded_mb = current / (1024 * 1024)  # Convert to MB
     if speed > 1:
-        speed_str = f"{speed / 1024:.2f} MB/s"  # Convert speed to MB/s if > 1 MB/s
+        speed_str = f"{speed:.2f} MB/s"  # Display speed in MB/s
     else:
-        speed_str = f"{speed:.2f} B/s"
+        speed_str = f"{speed * 1024:.2f} KB/s"  # Convert speed to KB/s if < 1 MB/s
+    estimated_time = (total - current) / speed  # Calculate estimated time
+    if estimated_time < 60:
+        time_str = f"{estimated_time:.2f} seconds"
+    elif estimated_time < 3600:
+        time_str = f"{estimated_time / 60:.2f} minutes"
+    else:
+        time_str = f"{estimated_time / 3600:.2f} hours"
+
     with open(f'{message.id}{type}status.txt', "w") as fileup:
         fileup.write(
             f"{downloaded_mb:.1f} MB / {file_size_mb:.1f} MB\n"
             f"Speed: {speed_str}\n"
-            f"Estimated time: {total - current:.2f} s"
+            f"Estimated time: {time_str}"
         )
 
 # start command
@@ -197,18 +205,17 @@ def save(client: Client, message):
                             else:
                                 bot.send_message(message.chat.id, f"**Error** : __{e}__")
 
-                # wait time
-                time.sleep(2)
+                    # wait time
+                    time.sleep(2)
             except MessageEmpty:
                 error_count += 1
 
-        # Send final message only if no stop command issued
-        if not stop_operation:
-            bot.send_message(
-                message.chat.id,
-                f"**تم نسخ وتحويل الرسائل من البوت @{bot.get_me().username}**",
-                reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("⁽ ᴛᴄʀᴇᴘ ₎ 🍿", url="https://t.me/tcrep1")]])
-            )
+        # Send final message
+        bot.send_message(
+            message.chat.id,
+            f"**تم نسخ وتحويل الرسائل**",
+            reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("⁽ ᴛᴄʀᴇᴘ ₎ 🍿", url="https://t.me/tcrep1")]])
+        )
 
 # handle private
 def handle_private(message, chatid, msgid):
@@ -369,8 +376,7 @@ def get_message_type(msg):
     except:
         pass
 
-USAGE = """
-**FOR PUBLIC CHATS**
+USAGE = """**FOR PUBLIC CHATS**
 
 **__just send post/s link__**
 
@@ -382,11 +388,11 @@ USAGE = """
 **MULTI POSTS**
 
 **__send public/private posts link as explained above with format "from - to" to send multiple messages like below__**
-
+```
 https://t.me/xxxx/1001-1010
 
 https://t.me/c/xxxx/101 - 120
-
+```
 **__note that space in between doesn't matter__**
 """
 

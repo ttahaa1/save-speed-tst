@@ -133,7 +133,7 @@ def save(client: Client, message):
         except InviteHashExpired:
             bot.send_message(message.chat.id, "**Invalid Link**")
 
-    # Getting message
+   # الحصول على الرسالة
     elif "https://t.me/" in message.text:
         datas = message.text.split("/")
         temp = datas[-1].replace("?single", "").split("-")
@@ -153,7 +153,7 @@ def save(client: Client, message):
                     chatid = int("-100" + datas[4])
 
                     if acc is None:
-                        bot.send_message(message.chat.id, f"**String Session is not Set**", reply_to_message_id=message.message_id)
+                        bot.send_message(message.chat.id,f"**String Session is not Set**", reply_to_message_id=message.id)
                         return
 
                     try:
@@ -164,27 +164,6 @@ def save(client: Client, message):
                             "⚠️ **Mistake: I cannot access the channel. Send the invitation link first. If you do not have an invitation link, contact support. @l_s_I_I.**",
                             reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("Support ᔆ ᴾ ᴱ ᴱ ᴰ ™𝓼", url="https://t.me/l_s_I_I")]])
                         )
-                        return
-
-                # Private
-                elif "https://t.me/b/" in message.text:
-                    username = datas[4]
-                    bot.send_message(
-                        message.chat.id, f"**String Session is not Set**
-                    )
-                    return
-                    try:
-                        handle_private(message, username, msgid, acc)
-                    except Exception as e:
-                        bot.send_message(message.chat.id, f"**Error** : __{e}__")
-                # Public
-                else:
-                    username = datas[3]
-
-                    try:
-                        msg = bot.get_messages(username, msgid)
-                    except UsernameNotOccupied:
-                        bot.send_message(message.chat.id, f"**The username is not occupied by anyone**")
                         return
 
                     try:

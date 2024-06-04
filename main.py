@@ -35,7 +35,7 @@ def downstatus(statusfile, message):
         try:
             bot.edit_message_text(
                 message.chat.id,
-                message.id,
+                message.message_id,
                 f"__Downloaded__ : **{txt}**"
             )
             time.sleep(2)  # Changed sleep time to 2 seconds
@@ -55,7 +55,7 @@ def upstatus(statusfile, message):
         try:
             bot.edit_message_text(
                 message.chat.id,
-                message.id,
+                message.message_id,
                 f"__Uploaded__ : **{txt}**"
             )
             time.sleep(9)
@@ -93,7 +93,7 @@ def send_start(client: Client, message):
     stop_operation = False
     bot.send_message(
         message.chat.id,
-        f"**__👋 Hi** **{message.from_user.mention}**, **I am Save Restricted Bot, I can send you restricted content by its post link__**\n\n{USAGE}",
+        f"**👋 Hi {message.from_user.mention}, I am Save Restricted Bot. I can send you restricted content by its post link.**\n\n{USAGE}",
         reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("⁽ ᴛᴄʀᴇᴘ ₎ 🍿", url="https://t.me/tcrep1")]]),
         reply_to_message_id=message.message_id
     )
@@ -161,16 +161,18 @@ def save(client: Client, message):
                     except ChannelInvalid:
                         bot.send_message(
                             message.chat.id,
-                            "⚠️ **mistakes . I cannot access the channel. Send the invitation link first. If you do not have an invitation link, contact support. @l_s_I_I .**",
+                            "⚠️ **Mistake: I cannot access the channel. Send the invitation link first. If you do not have an invitation link, contact support. @l_s_I_I.**",
                             reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("Support ᔆ ᴾ ᴱ ᴱ ᴰ ™𝓼", url="https://t.me/l_s_I_I")]])
                         )
                         return
 
+                # Private
                 elif "https://t.me/b/" in message.text:
                     username = datas[4]
-
-                    message.chat.id, f"**String Session is not Set**")
-                        return
+                    bot.send_message(
+                        message.chat.id, f"**String Session is not Set**
+                    )
+                    return
                     try:
                         handle_private(message, username, msgid, acc)
                     except Exception as e:
@@ -201,8 +203,8 @@ def save(client: Client, message):
                             else:
                                 bot.send_message(message.chat.id, f"**Error** : __{e}__")
 
-                    # Wait time
-                    time.sleep(2)
+                        # Wait time
+                        time.sleep(2)
             except MessageEmpty:
                 error_count += 1
 
@@ -392,5 +394,5 @@ https://t.me/c/xxxx/101 - 120
 **__note that space in between doesn't matter__**
 """
 
-# Infinity polling
+# infinity polling
 bot.run()

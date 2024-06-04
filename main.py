@@ -1,11 +1,11 @@
+import os
+import threading
+import time
+from os import environ
+
 from pyrogram import Client, filters
 from pyrogram.errors import UserAlreadyParticipant, InviteHashExpired, UsernameNotOccupied, MessageEmpty, ChannelInvalid
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
-
-import time
-import os
-import threading
-from os import environ
 
 bot_token = environ.get("TOKEN", "")
 api_hash = environ.get("HASH", "")
@@ -28,15 +28,19 @@ def downstatus(statusfile, message):
         if os.path.exists(statusfile):
             break
 
-    time.sleep(1)
+    time.sleep(2)
     while os.path.exists(statusfile):
         with open(statusfile, "r") as downread:
             txt = downread.read()
         try:
-            bot.edit_message_text(message.chat.id, message.id, f"__Downloaded__ : **{txt}**")
-            time.sleep(1)
+            bot.edit_message_text(
+                message.chat.id,
+                message.id,
+                f"__Downloaded__ : **{txt}**"
+            )
+            time.sleep(9)
         except:
-            time.sleep(1)
+            time.sleep(4)
 
 # upload status
 def upstatus(statusfile, message):
@@ -44,49 +48,62 @@ def upstatus(statusfile, message):
         if os.path.exists(statusfile):
             break
 
-    time.sleep(1)
+    time.sleep(2)
     while os.path.exists(statusfile):
         with open(statusfile, "r") as upread:
             txt = upread.read()
         try:
-            bot.edit_message_text(message.chat.id, message.id, f"__Uploaded__ : **{txt}**")
-            time.sleep(1)
+            bot.edit_message_text(
+                message.chat.id,
+                message.id,
+                f"__Uploaded__ : **{txt}**"
+            )
+            time.sleep(9)
         except:
-            time.sleep(1)
+            time.sleep(4)
 
 # progress writer
 def progress(current, total, message, type):
     speed = current / (time.time() - progress.start_time)
-    estimated_time = (total - current) / speed
-
-    if speed > 1024 * 1024:
-        speed_text = f"{speed / (1024 * 1024):.2f} MB/s"
+    file_size_mb = total / (1024 * 1024)  # Convert to MB
+    downloaded_mb = current / (1024 * 1024)  # Convert to MB
+    if speed > 1:
+        speed_str = f"{speed / 1024:.2f} MB/s"  # Convert speed to MB/s if > 1 MB/s
     else:
-        speed_text = f"{speed / 1024:.2f} KB/s"
-
+        speed_str = f"{speed:.2f} B/s"
     with open(f'{message.id}{type}status.txt', "w") as fileup:
-        fileup.write(f"{current / (1024 * 1024):.2f} MB of {total / (1024 * 1024):.2f} MB\nSpeed: {speed_text}\nEstimated time: {estimated_time:.2f} s")
+        fileup.write(
+            f"{downloaded_mb:.1f} MB / {file_size_mb:.1f} MB\n"
+            f"Speed: {speed_str}\n"
+            f"Estimated time: {total - current:.2f} s"
+        )
 
 # start command
 @bot.on_message(filters.command(["start"]))
 def send_start(client: Client, message):
     global stop_operation
     stop_operation = False
-    bot.send_message(message.chat.id, f"**__👋 Hi** **{message.from_user.mention}**, **I am Save Restricted Bot, I can send you restricted content by its post link__**\n\n{USAGE}",
-                     reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("⁽ ᴛᴄʀᴇᴘ ₎ 🍿", url="https://t.me/tcrep1")]]), reply_to_message_id=message.id)
+    bot.send_message(
+        message.chat.id,
+        f"**__👋 Hi** **{message.from_user.mention}**, **I am Save Restricted Bot, I can send you restricted content by its post link__**\n\n{USAGE}",
+        reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("⁽ ᴛᴄʀᴇᴘ ₎ 🍿", url="https://t.me/tcrep1")]]),
+        reply_to_message_id=message.id
+    )
 
 # stop command
 @bot.on_message(filters.command(["stop"]))
 def stop_operation_command(client: Client, message):
     global stop_operation
     stop_operation = True
-    bot.send_message(message.chat.id, "The process has been stopped by pressing /start to start again 💫.")
+    bot.send_message(
+        message.chat.id,
+        "The process has been stopped by pressing /start to start again 💫."
+    )
 
 @bot.on_message(filters.text)
 def save(client: Client, message):
     global stop_operation
-    print(message.text)
-    
+
     copied_count = 0
     error_count = 0
 
@@ -115,10 +132,8 @@ def save(client: Client, message):
         fromID = int(temp[0].strip())
         try:
             toID = int(temp[1].strip())
-            multi_posts = True
         except:
             toID = fromID
-            multi_posts = False
 
         for msgid in range(fromID, toID + 1):
             if stop_operation:
@@ -183,15 +198,17 @@ def save(client: Client, message):
                                 bot.send_message(message.chat.id, f"**Error** : __{e}__")
 
                 # wait time
-                time.sleep(1)
+                time.sleep(2)
             except MessageEmpty:
                 error_count += 1
 
-        # Send final message if multi posts were used
-        if multi_posts:
-            bot_username = bot.get_me().username
-            bot.send_message(message.chat.id, f"**تم نسخ وتحويل الرسائل من البوت [{bot_username}](https://t.me/{bot_username})**",
-                             reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("⁽ ᴛᴄʀᴇᴘ ₎ 🍿", url="https://t.me/tcrep1")]]))
+        # Send final message only if no stop command issued
+        if not stop_operation:
+            bot.send_message(
+                message.chat.id,
+                f"**تم نسخ وتحويل الرسائل من البوت @{bot.get_me().username}**",
+                reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("⁽ ᴛᴄʀᴇᴘ ₎ 🍿", url="https://t.me/tcrep1")]])
+            )
 
 # handle private
 def handle_private(message, chatid, msgid):
@@ -218,22 +235,54 @@ def handle_private(message, chatid, msgid):
         except:
             thumb = None
 
-        bot.send_document(message.chat.id, file, thumb=thumb, caption=msg.caption, caption_entities=msg.caption_entities, progress=progress, progress_args=[message, "up"])
+        bot.send_document(
+            message.chat.id,
+            file,
+            thumb=thumb,
+            caption=msg.caption,
+            caption_entities=msg.caption_entities,
+            progress=progress,
+            progress_args=[message, "up"]
+        )
         if thumb is not None:
             os.remove(thumb)
 
     elif "Video" == msg_type:
         try:
-            thumb = acc.download_media(msg.document.thumbs[0].file_id)
+            thumb = acc.download_media(msg.video.thumbs[0].file_id)
         except:
             thumb = None
 
-        bot.send_document(message.chat.id, file, thumb=thumb, caption=msg.caption, caption_entities=msg.caption_entities, progress=progress, progress_args=[message, "up"])
+        bot.send_video(
+            message.chat.id,
+            file,
+            duration=msg.video.duration,
+            width=msg.video.width,
+            height=msg.video.height,
+            thumb=thumb,
+            caption=msg.caption,
+            caption_entities=msg.caption_entities,
+            progress=progress,
+            progress_args=[message, "up"]
+        )
         if thumb is not None:
             os.remove(thumb)
 
-    elif "Video" == msg_type:
-        bot.send_video(message.chat.id, file, caption=msg.caption, caption_entities=msg.caption_entities, progress=progress, progress_args=[message, "up"])
+    elif "Animation" == msg_type:
+        bot.send_animation(message.chat.id, file)
+
+    elif "Sticker" == msg_type:
+        bot.send_sticker(message.chat.id, file)
+
+    elif "Voice" == msg_type:
+        bot.send_voice(
+            message.chat.id,
+            file,
+            caption=msg.caption,
+            caption_entities=msg.caption_entities,
+            progress=progress,
+            progress_args=[message, "up"]
+        )
 
     elif "Audio" == msg_type:
         try:
@@ -241,12 +290,30 @@ def handle_private(message, chatid, msgid):
         except:
             thumb = None
 
-        bot.send_audio(message.chat.id, file, caption=msg.caption, caption_entities=msg.caption_entities, performer=msg.audio.performer, title=msg.audio.title, duration=msg.audio.duration, thumb=thumb, progress=progress, progress_args=[message, "up"])
+        bot.send_audio(
+            message.chat.id,
+            file,
+            caption=msg.caption,
+            caption_entities=msg.caption_entities,
+            performer=msg.audio.performer,
+            title=msg.audio.title,
+            duration=msg.audio.duration,
+            thumb=thumb,
+            progress=progress,
+            progress_args=[message, "up"]
+        )
         if thumb is not None:
             os.remove(thumb)
 
     elif "Photo" == msg_type:
-        bot.send_photo(message.chat.id, file, caption=msg.caption, caption_entities=msg.caption_entities, progress=progress, progress_args=[message, "up"])
+        bot.send_photo(
+            message.chat.id,
+            file,
+            caption=msg.caption,
+            caption_entities=msg.caption_entities,
+            progress=progress,
+            progress_args=[message, "up"]
+        )
 
     os.remove(f'{message.id}upstatus.txt')
     bot.delete_messages(message.chat.id, smsg.id)
@@ -302,7 +369,8 @@ def get_message_type(msg):
     except:
         pass
 
-USAGE = """**FOR PUBLIC CHATS**
+USAGE = """
+**FOR PUBLIC CHATS**
 
 **__just send post/s link__**
 
@@ -314,11 +382,11 @@ USAGE = """**FOR PUBLIC CHATS**
 **MULTI POSTS**
 
 **__send public/private posts link as explained above with format "from - to" to send multiple messages like below__**
-```
+
 https://t.me/xxxx/1001-1010
 
 https://t.me/c/xxxx/101 - 120
-```
+
 **__note that space in between doesn't matter__**
 """
 

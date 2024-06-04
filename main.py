@@ -22,7 +22,7 @@ else:
 # Flag to stop operations
 stop_operation = False
 
-# download status
+# Download status
 def downstatus(statusfile, message):
     while True:
         if os.path.exists(statusfile):
@@ -42,7 +42,7 @@ def downstatus(statusfile, message):
         except:
             time.sleep(4)
 
-# upload status
+# Upload status
 def upstatus(statusfile, message):
     while True:
         if os.path.exists(statusfile):
@@ -62,7 +62,7 @@ def upstatus(statusfile, message):
         except:
             time.sleep(4)
 
-# progress writer
+# Progress writer
 def progress(current, total, message, type):
     speed = current / (time.time() - progress.start_time)
     file_size_mb = total / (1024 * 1024)  # Convert to MB
@@ -79,14 +79,14 @@ def progress(current, total, message, type):
     else:
         time_str = f"{estimated_time / 3600:.2f} hours"
 
-    with open(f'{message.id}{type}status.txt', "w") as fileup:
+    with open(f'{message.message_id}{type}status.txt', "w") as fileup:
         fileup.write(
             f"{downloaded_mb:.1f} MB / {file_size_mb:.1f} MB\n"
             f"Speed: {speed_str}\n"
             f"Estimated time: {time_str}"
         )
 
-# start command
+# Start command
 @bot.on_message(filters.command(["start"]))
 def send_start(client: Client, message):
     global stop_operation
@@ -95,10 +95,10 @@ def send_start(client: Client, message):
         message.chat.id,
         f"**__👋 Hi** **{message.from_user.mention}**, **I am Save Restricted Bot, I can send you restricted content by its post link__**\n\n{USAGE}",
         reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("⁽ ᴛᴄʀᴇᴘ ₎ 🍿", url="https://t.me/tcrep1")]]),
-        reply_to_message_id=message.id
+        reply_to_message_id=message.message_id
     )
 
-# stop command
+# Stop command
 @bot.on_message(filters.command(["stop"]))
 def stop_operation_command(client: Client, message):
     global stop_operation
@@ -115,7 +115,7 @@ def save(client: Client, message):
     copied_count = 0
     error_count = 0
 
-    # joining chats
+    # Joining chats
     if "https://t.me/+" in message.text or "https://t.me/joinchat/" in message.text:
         if acc is None:
             bot.send_message(message.chat.id, f"**String Session is not Set**")
@@ -133,7 +133,7 @@ def save(client: Client, message):
         except InviteHashExpired:
             bot.send_message(message.chat.id, "**Invalid Link**")
 
-    # getting message
+    # Getting message
     elif "https://t.me/" in message.text:
         datas = message.text.split("/")
         temp = datas[-1].replace("?single", "").split("-")
@@ -149,13 +149,12 @@ def save(client: Client, message):
                 return
 
             try:
-               # private
-			if "https://t.me/c/" in message.text:
-				chatid = int("-100" + datas[4])
-				
-				if acc is None:
-					bot.send_message(message.chat.id,f"**String Session is not Set**", reply_to_message_id=message.id)
-					return
+                if "https://t.me/c/" in message.text:
+                    chatid = int("-100" + datas[4])
+
+                    if acc is None:
+                        bot.send_message(message.chat.id, f"**String Session is not Set**", reply_to_message_id=message.message_id)
+                        return
 
                     try:
                         handle_private(message, chatid, msgid)
@@ -167,19 +166,18 @@ def save(client: Client, message):
                         )
                         return
 
-                # bot
                 elif "https://t.me/b/" in message.text:
                     username = datas[4]
 
                     if acc is None:
-                        bot.send_message(message.chat.id, f"**String Session is not Set**")
-                        return
+                        bot.send_message(message.chat.id, f"**String Session is not Set**)
+                    return
                     try:
                         handle_private(message, username, msgid)
                     except Exception as e:
                         bot.send_message(message.chat.id, f"**Error** : __{e}__")
 
-                # public
+                # Public
                 else:
                     username = datas[3]
 
@@ -190,7 +188,7 @@ def save(client: Client, message):
                         return
 
                     try:
-                        bot.copy_message(message.chat.id, msg.chat.id, msg.id)
+                        bot.copy_message(message.chat.id, msg.chat.id, msgid)
                         copied_count += 1
                     except:
                         if acc is None:
@@ -205,7 +203,7 @@ def save(client: Client, message):
                             else:
                                 bot.send_message(message.chat.id, f"**Error** : __{e}__")
 
-                    # wait time
+                    # Wait time
                     time.sleep(2)
             except MessageEmpty:
                 error_count += 1
@@ -217,7 +215,7 @@ def save(client: Client, message):
             reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("⁽ ᴛᴄʀᴇᴘ ₎ 🍿", url="https://t.me/tcrep1")]])
         )
 
-# handle private
+# Handle private
 def handle_private(message, chatid, msgid):
     msg = acc.get_messages(chatid, msgid)
     msg_type = get_message_type(msg)
@@ -228,12 +226,12 @@ def handle_private(message, chatid, msgid):
 
     progress.start_time = time.time()
     smsg = bot.send_message(message.chat.id, '__Downloading__')
-    dosta = threading.Thread(target=lambda: downstatus(f'{message.id}downstatus.txt', smsg), daemon=True)
+    dosta = threading.Thread(target=lambda: downstatus(f'{message.message_id}downstatus.txt', smsg), daemon=True)
     dosta.start()
     file = acc.download_media(msg, progress=progress, progress_args=[message, "down"])
-    os.remove(f'{message.id}downstatus.txt')
+    os.remove(f'{message.message_id}downstatus.txt')
 
-    upsta = threading.Thread(target=lambda: upstatus(f'{message.id}upstatus.txt', smsg), daemon=True)
+    upsta = threading.Thread(target=lambda: upstatus(f'{message.message_id}upstatus.txt', smsg), daemon=True)
     upsta.start()
 
     if "Document" == msg_type:
@@ -322,11 +320,11 @@ def handle_private(message, chatid, msgid):
             progress_args=[message, "up"]
         )
 
-    os.remove(f'{message.id}upstatus.txt')
-    bot.delete_messages(message.chat.id, smsg.id)
+    os.remove(f'{message.message_id}upstatus.txt')
+    bot.delete_messages(message.chat.id, smsg.message_id)
     os.remove(file)
 
-# get message type
+# Get message type
 def get_message_type(msg):
     try:
         msg.document.file_id
@@ -396,5 +394,5 @@ https://t.me/c/xxxx/101 - 120
 **__note that space in between doesn't matter__**
 """
 
-# infinity polling
+# Infinity polling
 bot.run()

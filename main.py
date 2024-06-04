@@ -12,13 +12,6 @@ api_hash = environ.get("HASH", "")
 api_id = environ.get("ID", "")
 bot = Client("mybot", api_id=api_id, api_hash=api_hash, bot_token=bot_token)
 
-ss = environ.get("STRING", "")
-if ss is not None:
-    acc = Client("myacc", api_id=api_id, api_hash=api_hash, session_string=ss)
-    acc.start()
-else:
-    acc = None
-
 # Flag to stop operations
 stop_operation = False
 
@@ -28,15 +21,15 @@ def downstatus(statusfile, message):
         if os.path.exists(statusfile):
             break
 
-    time.sleep(2)
+    time.sleep(1)
     while os.path.exists(statusfile):
         with open(statusfile, "r") as downread:
             txt = downread.read()
         try:
             bot.edit_message_text(message.chat.id, message.id, f"__Downloaded__ : **{txt}**")
-            time.sleep(9)
+            time.sleep(1)
         except:
-            time.sleep(4)
+            time.sleep(1)
 
 # upload status
 def upstatus(statusfile, message):
@@ -44,22 +37,28 @@ def upstatus(statusfile, message):
         if os.path.exists(statusfile):
             break
 
-    time.sleep(2)
+    time.sleep(1)
     while os.path.exists(statusfile):
         with open(statusfile, "r") as upread:
             txt = upread.read()
         try:
             bot.edit_message_text(message.chat.id, message.id, f"__Uploaded__ : **{txt}**")
-            time.sleep(9)
+            time.sleep(1)
         except:
-            time.sleep(4)
+            time.sleep(1)
 
-# progress writter
+# progress writer
 def progress(current, total, message, type):
     speed = current / (time.time() - progress.start_time)
     estimated_time = (total - current) / speed
+
+    if speed > 1024 * 1024:
+        speed_text = f"{speed / (1024 * 1024):.2f} MB/s"
+    else:
+        speed_text = f"{speed / 1024:.2f} KB/s"
+
     with open(f'{message.id}{type}status.txt', "w") as fileup:
-        fileup.write(f"{current * 100 / total:.1f}%\nSpeed: {speed:.2f} B/s\nEstimated time: {estimated_time:.2f} s")
+        fileup.write(f"{current / (1024 * 1024):.2f} MB of {total / (1024 * 1024):.2f} MB\nSpeed: {speed_text}\nEstimated time: {estimated_time:.2f} s")
 
 # start command
 @bot.on_message(filters.command(["start"]))
@@ -86,21 +85,8 @@ def save(client: Client, message):
 
     # joining chats
     if "https://t.me/+" in message.text or "https://t.me/joinchat/" in message.text:
-        if acc is None:
-            bot.send_message(message.chat.id, f"**String Session is not Set**")
-            return
-
-        try:
-            try:
-                acc.join_chat(message.text)
-            except Exception as e:
-                bot.send_message(message.chat.id, f"**Error** : __{e}__")
-                return
-            bot.send_message(message.chat.id, "**Chat Joined**")
-        except UserAlreadyParticipant:
-            bot.send_message(message.chat.id, "**Chat already Joined**")
-        except InviteHashExpired:
-            bot.send_message(message.chat.id, "**Invalid Link**")
+        bot.send_message(message.chat.id, "**String Session is not Set**")
+        return
 
     # getting message
     elif "https://t.me/" in message.text:
@@ -109,8 +95,10 @@ def save(client: Client, message):
         fromID = int(temp[0].strip())
         try:
             toID = int(temp[1].strip())
+            multi_posts = True
         except:
             toID = fromID
+            multi_posts = False
 
         for msgid in range(fromID, toID + 1):
             if stop_operation:
@@ -121,11 +109,6 @@ def save(client: Client, message):
                 # private
                 if "https://t.me/c/" in message.text:
                     chatid = int("-100" + datas[4])
-
-
-                    if acc is None:
-                        bot.send_message(message.chat.id, f"**String Session is not Set**")
-                        return
 
                     try:
                         handle_private(message, chatid, msgid)
@@ -141,9 +124,6 @@ def save(client: Client, message):
                 elif "https://t.me/b/" in message.text:
                     username = datas[4]
 
-                    if acc is None:
-                        bot.send_message(message.chat.id, f"**String Session is not Set**")
-                        return
                     try:
                         handle_private(message, username, msgid)
                     except Exception as e:
@@ -163,9 +143,6 @@ def save(client: Client, message):
                         bot.copy_message(message.chat.id, msg.chat.id, msg.id)
                         copied_count += 1
                     except:
-                        if acc is None:
-                            bot.send_message(message.chat.id, f"**String Session is not Set**")
-                            return
                         try:
                             handle_private(message, username, msgid)
                             copied_count += 1
@@ -176,62 +153,46 @@ def save(client: Client, message):
                                 bot.send_message(message.chat.id, f"**Error** : __{e}__")
 
                 # wait time
-                time.sleep(2)
+                time.sleep(1)
             except MessageEmpty:
                 error_count += 1
 
-        # Send final message
-        bot.send_message(message.chat.id, f"**تم نسخ وتحويل الرسائل من البوت @{bot.get_me().username}**",
-                         reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("⁽ ᴛᴄʀᴇᴘ ₎ 🍿", url="https://t.me/tcrep1")]]))
-
+        # Send final message if multi posts were used
+        if multi_posts:
+            bot_username = bot.get_me().username
+            bot.send_message(message.chat.id, f"**تم نسخ وتحويل الرسائل من البوت [{bot_username}](https://t.me/{bot_username})**",
+                             reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("⁽ ᴛᴄʀᴇᴘ ₎ 🍿", url="https://t.me/tcrep1")]]))
 # handle private
 def handle_private(message, chatid, msgid):
     msg = acc.get_messages(chatid, msgid)
     msg_type = get_message_type(msg)
 
     if "Text" == msg_type:
-        bot.send_message(message.chat.id, msg.text, entities=msg.entities)
-        return
+    bot.send_message(message.chat.id, msg.text, entities=msg.entities)
+    return
 
-    progress.start_time = time.time()
-    smsg = bot.send_message(message.chat.id, '__Downloading__')
-    dosta = threading.Thread(target=lambda: downstatus(f'{message.id}downstatus.txt', smsg), daemon=True)
-    dosta.start()
-    file = acc.download_media(msg, progress=progress, progress_args=[message, "down"])
-    os.remove(f'{message.id}downstatus.txt')
+progress.start_time = time.time()
+smsg = bot.send_message(message.chat.id, '__Downloading__')
+dosta = threading.Thread(target=lambda: downstatus(f'{message.id}downstatus.txt', smsg), daemon=True)
+dosta.start()
+file = acc.download_media(msg, progress=progress, progress_args=[message, "down"])
+os.remove(f'{message.id}downstatus.txt')
 
-    upsta = threading.Thread(target=lambda: upstatus(f'{message.id}upstatus.txt', smsg), daemon=True)
-    upsta.start()
+upsta = threading.Thread(target=lambda: upstatus(f'{message.id}upstatus.txt', smsg), daemon=True)
+upsta.start()
 
-    if "Document" == msg_type:
-        try:
-            thumb = acc.download_media(msg.document.thumbs[0].file_id)
-        except:
-            thumb = None
+if "Document" == msg_type:
+    try:
+        thumb = acc.download_media(msg.document.thumbs[0].file_id)
+    except:
+        thumb = None
 
-        bot.send_document(message.chat.id, file, thumb=thumb, caption=msg.caption, caption_entities=msg.caption_entities, progress=progress, progress_args=[message, "up"])
-        if thumb is not None:
-            os.remove(thumb)
+    bot.send_document(message.chat.id, file, thumb=thumb, caption=msg.caption, caption_entities=msg.caption_entities, progress=progress, progress_args=[message, "up"])
+    if thumb is not None:
+        os.remove(thumb)
 
-    elif "Video" == msg_type:
-        try:
-            thumb = acc.download_media(msg.video.thumbs[0].file_id)
-        except:
-            thumb = None
-
-
-        bot.send_video(message.chat.id, file, duration=msg.video.duration, width=msg.video.width, height=msg.video.height, thumb=thumb, caption=msg.caption, caption_entities=msg.caption_entities, progress=progress, progress_args=[message, "up"])
-        if thumb is not None:
-            os.remove(thumb)
-
-    elif "Animation" == msg_type:
-        bot.send_animation(message.chat.id, file)
-
-    elif "Sticker" == msg_type:
-        bot.send_sticker(message.chat.id, file)
-
-    elif "Voice" == msg_type:
-        bot.send_voice(message.chat.id, file, caption=msg.caption, caption_entities=msg.caption_entities, progress=progress, progress_args=[message, "up"])
+elif "Video" == msg_type:
+    bot.send_video(message.chat.id, file, caption=msg.caption, caption_entities=msg.caption_entities, progress=progress, progress_args=[message, "up"])
 
     elif "Audio" == msg_type:
         try:

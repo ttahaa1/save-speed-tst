@@ -162,37 +162,38 @@ def save(client: Client, message):
             bot_username = bot.get_me().username
             bot.send_message(message.chat.id, f"**تم نسخ وتحويل الرسائل من البوت [{bot_username}](https://t.me/{bot_username})**",
                              reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("⁽ ᴛᴄʀᴇᴘ ₎ 🍿", url="https://t.me/tcrep1")]]))
+
 # handle private
 def handle_private(message, chatid, msgid):
     msg = acc.get_messages(chatid, msgid)
     msg_type = get_message_type(msg)
 
     if "Text" == msg_type:
-    bot.send_message(message.chat.id, msg.text, entities=msg.entities)
-    return
+        bot.send_message(message.chat.id, msg.text, entities=msg.entities)
+        return
 
-progress.start_time = time.time()
-smsg = bot.send_message(message.chat.id, '__Downloading__')
-dosta = threading.Thread(target=lambda: downstatus(f'{message.id}downstatus.txt', smsg), daemon=True)
-dosta.start()
-file = acc.download_media(msg, progress=progress, progress_args=[message, "down"])
-os.remove(f'{message.id}downstatus.txt')
+    progress.start_time = time.time()
+    smsg = bot.send_message(message.chat.id, '__Downloading__')
+    dosta = threading.Thread(target=lambda: downstatus(f'{message.id}downstatus.txt', smsg), daemon=True)
+    dosta.start()
+    file = acc.download_media(msg, progress=progress, progress_args=[message, "down"])
+    os.remove(f'{message.id}downstatus.txt')
 
-upsta = threading.Thread(target=lambda: upstatus(f'{message.id}upstatus.txt', smsg), daemon=True)
-upsta.start()
+    upsta = threading.Thread(target=lambda: upstatus(f'{message.id}upstatus.txt', smsg), daemon=True)
+    upsta.start()
 
-if "Document" == msg_type:
-    try:
-        thumb = acc.download_media(msg.document.thumbs[0].file_id)
-    except:
-        thumb = None
+    if "Document" == msg_type:
+        try:
+            thumb = acc.download_media(msg.document.thumbs[0].file_id)
+        except:
+            thumb = None
 
-    bot.send_document(message.chat.id, file, thumb=thumb, caption=msg.caption, caption_entities=msg.caption_entities, progress=progress, progress_args=[message, "up"])
-    if thumb is not None:
-        os.remove(thumb)
+        bot.send_document(message.chat.id, file, thumb=thumb, caption=msg.caption, caption_entities=msg.caption_entities, progress=progress, progress_args=[message, "up"])
+        if thumb is not None:
+            os.remove(thumb)
 
-elif "Video" == msg_type:
-    bot.send_video(message.chat.id, file, caption=msg.caption, caption_entities=msg.caption_entities, progress=progress, progress_args=[message, "up"])
+    elif "Video" == msg_type:
+        bot.send_video(message.chat.id, file, caption=msg.caption, caption_entities=msg.caption_entities, progress=progress, progress_args=[message, "up"])
 
     elif "Audio" == msg_type:
         try:

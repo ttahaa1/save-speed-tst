@@ -169,14 +169,12 @@ def save(client: Client, message):
                 elif "https://t.me/b/" in message.text:
                     username = datas[4]
 
-                    if acc is None:
-                        bot.send_message(message.chat.id, f"**String Session is not Set**)
-                    return
+                    message.chat.id, f"**String Session is not Set**")
+                        return
                     try:
-                        handle_private(message, username, msgid)
+                        handle_private(message, username, msgid, acc)
                     except Exception as e:
                         bot.send_message(message.chat.id, f"**Error** : __{e}__")
-
                 # Public
                 else:
                     username = datas[3]

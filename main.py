@@ -10,9 +10,14 @@ from os import environ
 bot_token = environ.get("TOKEN", "")
 api_hash = environ.get("HASH", "")
 api_id = environ.get("ID", "")
-ss = environ.get("STRING", "")
 bot = Client("mybot", api_id=api_id, api_hash=api_hash, bot_token=bot_token)
-acc = Client("myacc", api_id=api_id, api_hash=api_hash, session_string=ss) if ss else None
+
+ss = environ.get("STRING", "")
+if ss is not None:
+    acc = Client("myacc", api_id=api_id, api_hash=api_hash, session_string=ss)
+    acc.start()
+else:
+    acc = None
 
 # Flag to stop operations
 stop_operation = False
@@ -87,8 +92,21 @@ def save(client: Client, message):
 
     # joining chats
     if "https://t.me/+" in message.text or "https://t.me/joinchat/" in message.text:
-        bot.send_message(message.chat.id, "**String Session is not Set**")
-        return
+        if acc is None:
+            bot.send_message(message.chat.id, f"**String Session is not Set**")
+            return
+
+        try:
+            try:
+                acc.join_chat(message.text)
+            except Exception as e:
+                bot.send_message(message.chat.id, f"**Error** : __{e}__")
+                return
+            bot.send_message(message.chat.id, "**Chat Joined**")
+        except UserAlreadyParticipant:
+            bot.send_message(message.chat.id, "**Chat already Joined**")
+        except InviteHashExpired:
+            bot.send_message(message.chat.id, "**Invalid Link**")
 
     # getting message
     elif "https://t.me/" in message.text:
@@ -112,6 +130,10 @@ def save(client: Client, message):
                 if "https://t.me/c/" in message.text:
                     chatid = int("-100" + datas[4])
 
+                    if acc is None:
+                        bot.send_message(message.chat.id, f"**String Session is not Set**")
+                        return
+
                     try:
                         handle_private(message, chatid, msgid)
                     except ChannelInvalid:
@@ -126,6 +148,9 @@ def save(client: Client, message):
                 elif "https://t.me/b/" in message.text:
                     username = datas[4]
 
+                    if acc is None:
+                        bot.send_message(message.chat.id, f"**String Session is not Set**")
+                        return
                     try:
                         handle_private(message, username, msgid)
                     except Exception as e:
@@ -145,6 +170,9 @@ def save(client: Client, message):
                         bot.copy_message(message.chat.id, msg.chat.id, msg.id)
                         copied_count += 1
                     except:
+                        if acc is None:
+                            bot.send_message(message.chat.id, f"**String Session is not Set**")
+                            return
                         try:
                             handle_private(message, username, msgid)
                             copied_count += 1
@@ -185,6 +213,16 @@ def handle_private(message, chatid, msgid):
     upsta.start()
 
     if "Document" == msg_type:
+        try:
+            thumb = acc.download_media(msg.document.thumbs[0].file_id)
+        except:
+            thumb = None
+
+        bot.send_document(message.chat.id, file, thumb=thumb, caption=msg.caption, caption_entities=msg.caption_entities, progress=progress, progress_args=[message, "up"])
+        if thumb is not None:
+            os.remove(thumb)
+
+    elif "Video" == msg_type:
         try:
             thumb = acc.download_media(msg.document.thumbs[0].file_id)
         except:

@@ -151,7 +151,7 @@ def save(client: Client, message):
             try:
                 # private
                 if "https://t.me/c/" in message.text:
-                    chatid = int("-" + datas[4])
+                    chatid = int("" + datas[4])
 
                     if acc is None:
                         bot.send_message(message.chat.id, f"**String Session is not Set**")
